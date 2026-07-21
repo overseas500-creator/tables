@@ -38,13 +38,20 @@
         .schedule-table tbody tr:last-child td { border-bottom: 0; }
         .schedule-table th { background: #f8fafc; color: #334155; font-weight: 800; }
         .schedule-slot { min-height: 86px; transition: background .15s, outline .15s; }
-        .schedule-slot.drop-ready { outline: 3px solid #2dd4bf; outline-offset: -3px; background: #f0fdfa; }
+        .schedule-slot.drop-ready,
+        .schedule-slot.drop-block-start,
+        .schedule-slot.drop-block-tail { background: #f0fdfa; }
+        .schedule-slot.drop-ready,
+        .schedule-slot.drop-block-start { outline: 3px solid #14b8a6; outline-offset: -3px; }
+        .schedule-slot.drop-block-tail { outline: 3px dashed #2dd4bf; outline-offset: -3px; }
+        .schedule-slot.drop-invalid { outline: 3px solid #ef4444; outline-offset: -3px; background: #fef2f2; }
         .schedule-slot.unavailable { background: #f1f5f9; color: #94a3b8; }
 
         .lesson-card { border-radius: 11px; padding: 8px; background: #ecfeff; border: 1px solid #99f6e4; cursor: grab; line-height: 1.45; }
         .lesson-card:active { cursor: grabbing; }
         .lesson-card.art { background: #fff7ed; border-color: #fdba74; }
         .lesson-card.conflict { background: #fef2f2; border-color: #f87171; }
+        .lesson-card.drag-source { opacity: .42; outline: 2px dashed #0f766e; outline-offset: 2px; }
         .lesson-card + .lesson-card { margin-top: 5px; }
 
         .soft-scrollbar::-webkit-scrollbar { width: 9px; height: 9px; }
@@ -69,6 +76,35 @@
         .print-warning { border: 2px solid #f59e0b; color: #92400e; background: #fffbeb; padding: 8px 10px; margin-bottom: 12px; font-size: 12px; font-weight: 700; }
         .signature-line { display: inline-block; width: 88px; height: 20px; border-bottom: 1px dotted #64748b; }
 
+        .colored-master-page { padding: 7mm; }
+        .colored-master-grid { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: var(--grid-font-size, 6.2pt); }
+        .colored-master-grid th, .colored-master-grid td { border: 1px solid #475569; padding: 2px; text-align: center; vertical-align: middle; line-height: 1.15; overflow-wrap: anywhere; }
+        .colored-master-grid thead th { background: #dbeafe; color: #0f172a; font-weight: 900; }
+        .colored-master-grid .grid-day { background: #e2e8f0; font-weight: 900; }
+        .colored-master-grid .grid-period { background: #f8fafc; font-weight: 900; }
+        .colored-master-grid .grid-empty { background: #ffffff; color: #cbd5e1; }
+        .colored-master-grid .day-start > * { border-top-width: 2.5px; border-top-color: #0f172a; }
+        .teacher-tinted { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        .teacher-name-key { display: block; font-weight: 900; line-height: 1.2; }
+        .colored-cell-label { display: block; font-weight: 900; }
+        .colored-grid-note { margin-top: 5px; color: #475569; text-align: center; font-size: 9px; }
+
+        .official-waiting-page { padding: 9mm; font-family: Tahoma, Arial, sans-serif; color: #000; }
+        .official-waiting-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; border-bottom: 1px solid #111827; padding-bottom: 2.5mm; margin-bottom: 2.5mm; font-size: 9pt; }
+        .official-waiting-header h1 { margin: 0; font-size: 14pt; text-align: center; }
+        .official-waiting-header .left { text-align: left; }
+        .waiting-absent-block { margin-top: 3.5mm; break-inside: avoid; page-break-inside: avoid; }
+        .waiting-preamble { margin-bottom: 1.5mm; font-size: 8.7pt; font-weight: 700; line-height: 1.65; text-align: right; }
+        .waiting-preamble .filled-line { display: inline-block; min-width: 25mm; padding: 0 2mm; border-bottom: 1px dotted #111827; text-align: center; font-weight: 900; }
+        .waiting-form-table { width: 100%; border: 2px solid #111827; border-collapse: collapse; table-layout: fixed; font-size: 8pt; }
+        .waiting-form-table th, .waiting-form-table td { border: 1px solid #111827; padding: 1mm; text-align: center; vertical-align: middle; overflow-wrap: normal; word-break: normal; }
+        .waiting-form-table th { background: #d1d5db; font-weight: 900; line-height: 1.25; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        .waiting-form-table tbody tr { height: 5.4mm; }
+        .waiting-form-table .write-space { text-align: right; }
+        .waiting-signature-cell::after { content: ""; display: block; width: 86%; height: 3.5mm; margin: 0 auto; border-bottom: 1px dotted #111827; }
+        .waiting-report-empty { border: 1px solid #111827; padding: 12mm; text-align: center; font-weight: 700; }
+        .waiting-report-footer { margin-top: 7mm; padding-top: 2mm; border-top: 1px dotted #6b7280; font-size: 10pt; font-weight: 900; text-align: left; break-inside: avoid; page-break-inside: avoid; }
+
         @media (max-width: 768px) {
             .print-page { padding: 18px; min-width: 940px; }
             .report-preview-scroll { overflow-x: auto; }
@@ -87,6 +123,16 @@
             .print-table { font-size: 9.5pt; }
             .print-table thead { display: table-header-group; }
             .print-table tr, .print-summary > div { break-inside: avoid; page-break-inside: avoid; }
+            .colored-master-page { height: 190mm !important; max-height: 190mm !important; overflow: hidden !important; }
+            .colored-master-grid { font-size: var(--grid-font-size, 6.2pt) !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            .colored-master-grid tbody tr { height: var(--grid-row-height, 4mm); }
+            .colored-master-grid th, .colored-master-grid td { padding: .45mm !important; }
+            .official-waiting-page { font-size: 9pt; }
+            .official-waiting-header { break-inside: avoid; page-break-inside: avoid; }
+            .waiting-absent-block { break-inside: avoid-page; page-break-inside: avoid; }
+            .waiting-form-table thead { display: table-header-group; }
+            .waiting-form-table tr { break-inside: avoid; page-break-inside: avoid; }
+            .waiting-form-table th { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
             a { color: inherit !important; text-decoration: none !important; }
         }
     </style>
@@ -184,6 +230,8 @@
                     <div class="mt-5 grid gap-3 sm:grid-cols-2">
                         <button data-report="all-classes" class="rounded-2xl border border-teal-200 bg-teal-50 p-4 text-right font-black text-teal-900 transition hover:-translate-y-0.5 hover:shadow">🏫 الجدول العام بترتيب الفصول</button>
                         <button data-report="all-teachers" class="rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-right font-black text-cyan-900 transition hover:-translate-y-0.5 hover:shadow">👩‍🏫 الجدول العام بترتيب المعلمين</button>
+                        <button data-report="colored-classes-only" class="rounded-2xl border border-fuchsia-200 bg-fuchsia-50 p-4 text-right font-black text-fuchsia-900 transition hover:-translate-y-0.5 hover:shadow">الجدول العام الملون (فصول فقط بدون مادة)</button>
+                        <button data-report="colored-subjects-only" class="rounded-2xl border border-violet-200 bg-violet-50 p-4 text-right font-black text-violet-900 transition hover:-translate-y-0.5 hover:shadow">الجدول العام الملون (مواد فقط بدون فصول)</button>
                     </div>
                 </section>
 
@@ -212,7 +260,7 @@
 
                 <section class="rounded-2xl bg-white p-5 shadow-sm">
                     <h3 class="text-lg font-black text-slate-900">تقرير حصص الانتظار اليومي</h3>
-                    <p class="mt-1 text-sm text-slate-500">يعرض الإسنادات المعتمدة فقط، مع خانة توقيع جاهزة.</p>
+                    <p class="mt-1 text-sm text-slate-500">نموذج رسمي من سبعة صفوف، مع جدول مستقل متتالٍ لكل معلم غائب.</p>
                     <div class="mt-4 flex flex-col gap-2 sm:flex-row">
                         <input id="dailyReportDate" type="date" class="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5">
                         <button data-report="daily-waiting" class="rounded-xl bg-amber-600 px-4 py-2.5 font-black text-white hover:bg-amber-700">طباعة التقرير اليومي</button>
@@ -437,7 +485,8 @@
 
     const elements = {};
     let toastTimer = null;
-    let draggedLessonId = null;
+    let activeDrag = null;
+    let lastDropPreviewKey = "";
     let archiveLoadWarning = "";
 
     function structuredCloneSafe(value) {
@@ -620,6 +669,7 @@
         const indexes = buildScheduleIndexes(cells);
         const seenCellIds = new Set();
         const normalSubjectDays = new Set();
+        const artLessonsBySubjectDay = new Map();
 
         if (includeStale && scheduleIsStale()) {
             warnings.push("تغيّرت البيانات الأساسية بعد توليد الجدول؛ التقرير يحمل علامة مسودة حتى إعادة التوليد.");
@@ -644,7 +694,7 @@
 
             if (subject && !subject.isArt) {
                 const key = `${cell.classId}|${cell.subjectId}|${cell.dayId}`;
-                if (normalSubjectDays.has(key)) errors.push(`تكررت مادة ${subject.name} للفصل ${schoolClass?.name || cell.classId} في اليوم نفسه.`);
+                if (normalSubjectDays.has(key)) errors.push("يوجد حصة لنفس المادة في نفس الفصل في نفس اليوم");
                 normalSubjectDays.add(key);
             }
         }
@@ -662,12 +712,19 @@
             const context = first ? subjectContext(first.stageId, first.subjectId) : null;
             if (!context) continue;
             if (context.subject.isArt) {
+                const artDayKey = `${first.classId}|${first.subjectId}|${first.dayId}`;
+                if (!artLessonsBySubjectDay.has(artDayKey)) artLessonsBySubjectDay.set(artDayKey, new Set());
+                artLessonsBySubjectDay.get(artDayKey).add(lessonId);
                 if (sorted.length !== 2 || sorted[1].period !== sorted[0].period + 1 || sorted[0].dayId !== sorted[1].dayId || sorted[0].classId !== sorted[1].classId || sorted[0].teacherId !== sorted[1].teacherId) {
                     errors.push(`حصة التربية الفنية ${lessonId} ليست كتلة متتالية سليمة.`);
                 }
             } else if (sorted.length !== 1) {
                 errors.push(`الحصة العادية ${lessonId} تحتوي على أكثر من فترة.`);
             }
+        }
+
+        for (const [key, lessonIds] of artLessonsBySubjectDay) {
+            if (lessonIds.size > 1) errors.push(`تكررت كتلة التربية الفنية للفصل والمادة في اليوم نفسه: ${key}.`);
         }
 
         return { valid: errors.length === 0, errors, warnings };
@@ -920,7 +977,7 @@
                 <div class="mb-4 flex items-center justify-between gap-3">
                     <div>
                         <h3 class="text-xl font-black text-slate-900">${escapeHtml(stage.name)}</h3>
-                        <p class="text-sm text-slate-500">اسحب الحصص العادية إلى خانة أخرى داخل الفصل نفسه.</p>
+                        <p class="text-sm text-slate-500">اسحب أي حصة داخل الفصل نفسه؛ وتتحرك التربية الفنية تلقائيًا ككتلة مزدوجة مترابطة.</p>
                     </div>
                     <span class="rounded-full bg-teal-50 px-3 py-1 text-xs font-black text-teal-800">${stage.classes.length} فصول</span>
                 </div>
@@ -959,8 +1016,16 @@
     }
 
     function renderLessonCard(cell, conflict) {
-        const part = cell.blockSize === 2 ? `<span class="mt-1 block text-[10px] font-bold">متتابعة ${cell.blockPart}/2 🔒</span>` : "";
-        return `<div class="lesson-card ${cell.isArt ? "art" : ""} ${conflict ? "conflict" : ""}" draggable="true" data-lesson-id="${escapeHtml(cell.lessonId)}" data-art="${cell.isArt ? "true" : "false"}">
+        const part = cell.blockSize === 2 ? `<span class="mt-1 block text-[10px] font-bold">🔗 كتلة مزدوجة ${cell.blockPart}/2</span><span class="block text-[9px] text-amber-800">اسحب أي جزء لنقل الحصتين معًا</span>` : "";
+        return `<div class="lesson-card ${cell.isArt ? "art" : ""} ${conflict ? "conflict" : ""}" draggable="true"
+            data-cell-id="${escapeHtml(cell.cellId)}"
+            data-lesson-id="${escapeHtml(cell.lessonId)}"
+            data-block-size="${Number(cell.blockSize || 1)}"
+            data-block-part="${Number(cell.blockPart || 1)}"
+            data-class-id="${escapeHtml(cell.classId)}"
+            data-day-id="${escapeHtml(cell.dayId)}"
+            data-period="${Number(cell.period)}"
+            title="${cell.blockSize === 2 ? "اسحب أي جزء لنقل حصتي التربية الفنية معًا" : "اسحب لنقل الحصة"}">
             <div class="text-xs font-black">${escapeHtml(cell.subjectName)}</div>
             <div class="mt-1 text-[11px] text-slate-600">${escapeHtml(cell.teacherName)}</div>
             ${part}
@@ -970,64 +1035,261 @@
     function attachScheduleDragEvents() {
         document.querySelectorAll(".lesson-card").forEach(card => {
             card.addEventListener("dragstart", event => {
-                if (card.dataset.art === "true") {
-                    event.preventDefault();
-                    showToast("يُمنع فك حصص التربية الفنية المتتالية؛ انقل الكتلة كاملة من خلال إعادة التوليد.", "error", 5000);
-                    return;
-                }
-                draggedLessonId = card.dataset.lessonId;
+                const payload = {
+                    type: "school-lesson",
+                    version: 1,
+                    lessonId: card.dataset.lessonId,
+                    cellId: card.dataset.cellId,
+                    sourceClassId: card.dataset.classId,
+                    sourceDayId: card.dataset.dayId,
+                    sourcePeriod: Number(card.dataset.period),
+                    blockSize: Number(card.dataset.blockSize || 1),
+                    grabbedBlockPart: Number(card.dataset.blockPart || 1)
+                };
+                activeDrag = payload;
+                lastDropPreviewKey = "";
                 event.dataTransfer.effectAllowed = "move";
-                event.dataTransfer.setData("text/plain", draggedLessonId);
+                const serialized = JSON.stringify(payload);
+                try { event.dataTransfer.setData("application/x-school-lesson+json", serialized); } catch (error) { /* text/plain remains the fallback */ }
+                event.dataTransfer.setData("text/plain", serialized);
+                document.querySelectorAll(".lesson-card").forEach(item => {
+                    if (item.dataset.lessonId === payload.lessonId) item.classList.add("drag-source");
+                });
             });
-            card.addEventListener("dragend", () => {
-                draggedLessonId = null;
-                document.querySelectorAll(".schedule-slot").forEach(slot => slot.classList.remove("drop-ready"));
-            });
+            card.addEventListener("dragend", clearDragVisuals);
         });
 
         document.querySelectorAll("[data-drop-class]").forEach(slot => {
             slot.addEventListener("dragover", event => {
-                if (!draggedLessonId) return;
+                if (!activeDrag) return;
                 event.preventDefault();
-                slot.classList.add("drop-ready");
+                const plan = updateDropPreview(slot);
+                event.dataTransfer.dropEffect = plan?.ok ? "move" : "none";
             });
-            slot.addEventListener("dragleave", () => slot.classList.remove("drop-ready"));
             slot.addEventListener("drop", event => {
                 event.preventDefault();
-                slot.classList.remove("drop-ready");
-                const lessonId = event.dataTransfer.getData("text/plain") || draggedLessonId;
-                moveLesson(lessonId, slot.dataset.dropClass, slot.dataset.dropDay, Number(slot.dataset.dropPeriod));
+                const payload = readDragPayload(event.dataTransfer) || activeDrag;
+                if (!payload || payload.type !== "school-lesson" || payload.version !== 1) {
+                    clearDragVisuals();
+                    showToast("انتهت عملية السحب. حاول سحب الحصة مرة أخرى.", "error");
+                    return;
+                }
+                moveLesson(
+                    payload.lessonId,
+                    slot.dataset.dropClass,
+                    slot.dataset.dropDay,
+                    Number(slot.dataset.dropPeriod),
+                    Number(payload.grabbedBlockPart || 1)
+                );
+                clearDragVisuals();
             });
         });
     }
 
-    function moveLesson(lessonId, targetClassId, targetDayId, targetPeriod) {
-        const originalCells = state.schedule.cells.filter(cell => cell.lessonId === lessonId);
-        if (!originalCells.length) return;
-        if (originalCells.some(cell => cell.blockSize === 2)) {
-            showToast("لا يمكن فصل حصص التربية الفنية المتتالية.", "error");
-            return;
+    function readDragPayload(dataTransfer) {
+        if (!dataTransfer) return null;
+        for (const type of ["application/x-school-lesson+json", "text/plain"]) {
+            try {
+                const raw = dataTransfer.getData(type);
+                if (!raw) continue;
+                const payload = JSON.parse(raw);
+                if (payload?.type === "school-lesson" && payload.version === 1 && typeof payload.lessonId === "string") return payload;
+            } catch (error) { /* Ignore external or malformed drag data. */ }
         }
-        const original = originalCells[0];
-        if (original.classId !== targetClassId) {
-            showToast("يمكن نقل الحصة داخل الفصل نفسه فقط حتى لا يتغير النصاب.", "error");
-            return;
+        return null;
+    }
+
+    function clearDropIndicators() {
+        document.querySelectorAll(".schedule-slot").forEach(slot => {
+            slot.classList.remove("drop-ready", "drop-block-start", "drop-block-tail", "drop-invalid");
+        });
+    }
+
+    function clearDragVisuals() {
+        clearDropIndicators();
+        document.querySelectorAll(".lesson-card").forEach(card => card.classList.remove("drag-source"));
+        activeDrag = null;
+        lastDropPreviewKey = "";
+    }
+
+    function findDropSlot(classId, dayId, period) {
+        return [...document.querySelectorAll("[data-drop-class]")].find(slot =>
+            slot.dataset.dropClass === classId &&
+            slot.dataset.dropDay === dayId &&
+            Number(slot.dataset.dropPeriod) === Number(period)
+        ) || null;
+    }
+
+    function updateDropPreview(slot) {
+        if (!activeDrag) return null;
+        const previewKey = `${slot.dataset.dropClass}|${slot.dataset.dropDay}|${slot.dataset.dropPeriod}|${activeDrag.lessonId}|${activeDrag.grabbedBlockPart}`;
+        if (previewKey === lastDropPreviewKey && activeDrag.lastPlan) return activeDrag.lastPlan;
+        lastDropPreviewKey = previewKey;
+        clearDropIndicators();
+
+        const plan = planLessonMove({
+            lessonId: activeDrag.lessonId,
+            targetClassId: slot.dataset.dropClass,
+            targetDayId: slot.dataset.dropDay,
+            targetPeriod: Number(slot.dataset.dropPeriod),
+            grabbedBlockPart: Number(activeDrag.grabbedBlockPart || 1)
+        });
+        activeDrag.lastPlan = plan;
+
+        if (!plan.ok) {
+            slot.classList.add("drop-invalid");
+            return plan;
         }
 
-        const candidateCells = structuredCloneSafe(state.schedule.cells);
-        const moving = candidateCells.find(cell => cell.lessonId === lessonId);
-        moving.dayId = targetDayId;
-        moving.period = targetPeriod;
-        const validation = validateSchedule(candidateCells, false);
-        if (!validation.valid) {
-            showToast(`تعذر النقل: ${validation.errors[0]}`, "error", 5500);
-            return;
+        for (let period = plan.targetStart; period <= plan.targetEnd; period += 1) {
+            const targetSlot = findDropSlot(plan.classId, plan.dayId, period);
+            if (targetSlot) targetSlot.classList.add(period === plan.targetStart ? "drop-block-start" : "drop-block-tail");
         }
-        state.schedule.cells = candidateCells;
+        return plan;
+    }
+
+    function moveFailure(code, message) {
+        return { ok: false, changed: false, code, message, proposedCells: state.schedule.cells };
+    }
+
+    function findDailySubjectDuplicate({ lessonId, classId, subjectId, dayId }) {
+        return state.schedule.cells.find(cell =>
+            cell.lessonId !== lessonId &&
+            cell.classId === classId &&
+            cell.subjectId === subjectId &&
+            cell.dayId === dayId
+        ) || null;
+    }
+
+    function planLessonMove({ lessonId, targetClassId, targetDayId, targetPeriod, grabbedBlockPart = 1 }) {
+        if (state.schedule.status !== "success" || !state.schedule.cells.length) {
+            return moveFailure("NO_SCHEDULE", "لا يوجد جدول صالح للنقل.");
+        }
+        if (scheduleIsStale()) {
+            return moveFailure("STALE_SCHEDULE", "تغيّرت الإعدادات بعد التوليد؛ أعد توليد الجدول قبل نقل الحصص.");
+        }
+
+        const sourceCells = state.schedule.cells
+            .filter(cell => cell.lessonId === lessonId)
+            .sort((a, b) => Number(a.blockPart) - Number(b.blockPart));
+        if (!sourceCells.length) return moveFailure("MISSING_LESSON", "الحصة المسحوبة لم تعد موجودة.");
+
+        const first = sourceCells[0];
+        const blockSize = Number(first.blockSize || 1);
+        const isValidSource = sourceCells.length === blockSize && sourceCells.every((cell, index) =>
+            cell.classId === first.classId &&
+            cell.stageId === first.stageId &&
+            cell.subjectId === first.subjectId &&
+            cell.teacherId === first.teacherId &&
+            cell.dayId === first.dayId &&
+            Number(cell.blockSize || 1) === blockSize &&
+            Number(cell.blockPart || 1) === index + 1 &&
+            Number(cell.period) === Number(first.period) + index
+        );
+        if (!isValidSource || ![1, 2].includes(blockSize)) {
+            return moveFailure("INVALID_SOURCE_BLOCK", "تعذر نقل الحصة لأن كتلتها غير مكتملة. أعد توليد الجدول.");
+        }
+
+        const subject = subjectContext(first.stageId, first.subjectId)?.subject;
+        if (blockSize === 2 && !subject?.isArt) {
+            return moveFailure("INVALID_DOUBLE_SUBJECT", "الكتلة المزدوجة ليست حصة تربية فنية صالحة.");
+        }
+        if (first.classId !== targetClassId) {
+            return moveFailure("CROSS_CLASS_MOVE", blockSize === 2
+                ? "يمكن نقل كتلة التربية الفنية داخل الفصل نفسه فقط حتى لا يتغير النصاب."
+                : "يمكن نقل الحصة داخل الفصل نفسه فقط حتى لا يتغير النصاب.");
+        }
+
+        const targetDay = dayById(targetDayId);
+        if (!targetDay) return moveFailure("UNKNOWN_DAY", "اليوم المستهدف غير موجود.");
+        const grabbedPart = Number(grabbedBlockPart);
+        const droppedPeriod = Number(targetPeriod);
+        if (!Number.isInteger(grabbedPart) || grabbedPart < 1 || grabbedPart > blockSize || !Number.isInteger(droppedPeriod)) {
+            return moveFailure("INVALID_DRAG_OFFSET", "بيانات السحب غير صالحة. حاول مرة أخرى.");
+        }
+
+        const targetStart = droppedPeriod - (grabbedPart - 1);
+        const targetEnd = targetStart + blockSize - 1;
+        if (targetStart < 1) {
+            return moveFailure("OUT_OF_DAY_START", "لا يمكن وضع الجزء الثاني هنا؛ ستبدأ الكتلة قبل الحصة الأولى.");
+        }
+        if (targetEnd > Number(targetDay.periods)) {
+            return moveFailure("OUT_OF_DAY_CAPACITY", blockSize === 2
+                ? `تحتاج التربية الفنية حصتين متتاليتين، ولا توجد حصة تالية بعد الحصة ${targetDay.periods} يوم ${targetDay.name}.`
+                : `الحصة المستهدفة تتجاوز سعة يوم ${targetDay.name}.`);
+        }
+
+        const unchanged = sourceCells.every((cell, index) => cell.dayId === targetDayId && Number(cell.period) === targetStart + index);
+        if (unchanged) {
+            return { ok: true, changed: false, code: "NO_CHANGE", message: "الحصة موجودة في هذا الموضع.", proposedCells: state.schedule.cells, classId: first.classId, dayId: targetDayId, targetStart, targetEnd, blockSize };
+        }
+
+        const remainingCells = state.schedule.cells.filter(cell => cell.lessonId !== lessonId);
+        if (subject && !subject.isArt && findDailySubjectDuplicate({
+            lessonId,
+            classId: first.classId,
+            subjectId: first.subjectId,
+            dayId: targetDayId
+        })) {
+            return moveFailure("SUBJECT_DAY_DUPLICATE", "يوجد حصة لنفس المادة في نفس الفصل في نفس اليوم");
+        }
+
+        const targetPeriods = new Set(Array.from({ length: blockSize }, (_, index) => targetStart + index));
+        const classConflict = remainingCells.find(cell => cell.classId === first.classId && cell.dayId === targetDayId && targetPeriods.has(Number(cell.period)));
+        if (classConflict) {
+            return moveFailure("CLASS_SLOT_CONFLICT", `لا يمكن النقل: الفصل لديه حصة أخرى في الحصة ${classConflict.period} من يوم ${targetDay.name}.`);
+        }
+        const teacherConflict = remainingCells.find(cell => cell.teacherId === first.teacherId && cell.dayId === targetDayId && targetPeriods.has(Number(cell.period)));
+        if (teacherConflict) {
+            return moveFailure("TEACHER_SLOT_CONFLICT", `لا يمكن النقل: ${teacherById(first.teacherId)?.name || "المعلم"} لديه حصة أخرى في الحصة ${teacherConflict.period} من يوم ${targetDay.name}.`);
+        }
+
+        const movedById = new Map(sourceCells.map((cell, index) => [cell.cellId, {
+            ...cell,
+            dayId: targetDayId,
+            period: targetStart + index,
+            blockPart: index + 1,
+            blockSize
+        }]));
+        const proposedCells = state.schedule.cells.map(cell => movedById.get(cell.cellId) || cell);
+        const validation = validateSchedule(proposedCells, false);
+        if (!validation.valid) {
+            return moveFailure("POST_MOVE_VALIDATION_FAILED", validation.errors[0] || "فشل التحقق من الجدول بعد النقل.");
+        }
+
+        return {
+            ok: true,
+            changed: true,
+            code: "READY",
+            message: "يمكن اعتماد النقل.",
+            proposedCells,
+            classId: first.classId,
+            dayId: targetDayId,
+            targetStart,
+            targetEnd,
+            blockSize
+        };
+    }
+
+    function moveLesson(lessonId, targetClassId, targetDayId, targetPeriod, grabbedBlockPart = 1) {
+        const plan = planLessonMove({ lessonId, targetClassId, targetDayId, targetPeriod, grabbedBlockPart });
+        if (!plan.ok) {
+            showToast(plan.message, "error", 5500);
+            return false;
+        }
+        if (!plan.changed) return true;
+
+        state.schedule.cells = plan.proposedCells;
         state.schedule.manualRevision += 1;
+        state.waiting.activePreview = null;
         renderSchedule();
         renderScheduleStatus();
-        showToast("تم نقل الحصة بعد التحقق من عدم وجود تعارض.");
+        if (plan.blockSize === 2) {
+            showToast(`تم نقل كتلة التربية الفنية كاملة إلى ${dayById(plan.dayId)?.name}، الحصتين ${plan.targetStart} و${plan.targetEnd}.`);
+        } else {
+            showToast(`تم نقل الحصة إلى ${dayById(plan.dayId)?.name}، الحصة ${plan.targetStart}، بعد التحقق من عدم وجود تعارض.`);
+        }
+        return true;
     }
 
     function weeklyBaseCount(teacherId) {
@@ -1582,6 +1844,169 @@
         return `<table class="print-table"><thead><tr><th style="width:10%">الحصة</th>${header}</tr></thead><tbody>${rows}</tbody></table>`;
     }
 
+    function teacherPrintColor(teacherId) {
+        const value = String(teacherId || "missing-teacher");
+        let hash = 2166136261;
+        for (let index = 0; index < value.length; index += 1) {
+            hash ^= value.charCodeAt(index);
+            hash = Math.imul(hash, 16777619);
+        }
+        const hue = (hash >>> 0) % 360;
+        return {
+            background: `hsl(${hue} 78% 91%)`,
+            border: `hsl(${hue} 58% 43%)`,
+            text: `hsl(${hue} 58% 20%)`
+        };
+    }
+
+    function coloredGeneralGridPage(mode, indexes, catalog, warning = "") {
+        if (!['classes', 'subjects'].includes(mode)) throw new Error("نوع الجدول الملون غير مدعوم.");
+        const activeTeacherIds = new Set(state.schedule.cells.map(cell => cell.teacherId));
+        const teachers = [...state.teachers]
+            .filter(teacher => activeTeacherIds.has(teacher.id))
+            .sort((a, b) => a.name.localeCompare(b.name, "ar"));
+        const rowCount = state.days.reduce((sum, day) => sum + Number(day.periods), 0);
+        const fontSize = teachers.length <= 10 ? 6.2 : teachers.length <= 16 ? 5.2 : 4.2;
+        const rowHeight = Math.max(3.1, Math.min(4, 142 / Math.max(1, rowCount)));
+        const title = mode === "classes"
+            ? "الجدول العام الملون (فصول فقط بدون مادة)"
+            : "الجدول العام الملون (مواد فقط بدون فصول)";
+
+        const teacherHeaders = teachers.map(teacher => {
+            const color = teacherPrintColor(teacher.id);
+            return `<th class="teacher-tinted" data-teacher-key="${escapeHtml(teacher.id)}" style="background:${color.background};border-color:${color.border};color:${color.text}"><span class="teacher-name-key">${escapeHtml(teacher.name)}</span></th>`;
+        }).join("");
+
+        const rows = state.days.flatMap(day => Array.from({ length: Number(day.periods) }, (_, index) => {
+            const period = index + 1;
+            const teacherCells = teachers.map(teacher => {
+                const list = indexes.byTeacherSlot.get(`${teacher.id}|${day.id}|${period}`) || [];
+                if (!list.length) return `<td class="grid-empty">—</td>`;
+                const color = teacherPrintColor(teacher.id);
+                const labels = list.map(rawCell => {
+                    const cell = decorateCell(rawCell, catalog);
+                    return mode === "classes" ? cell.className : cell.subjectName;
+                });
+                return `<td class="teacher-tinted" data-print-lesson data-report-mode="${mode}" data-teacher-id="${escapeHtml(teacher.id)}" style="background:${color.background};border-color:${color.border};color:${color.text}"><span class="colored-cell-label">${labels.map(escapeHtml).join("<br>")}</span></td>`;
+            }).join("");
+            return `<tr class="${period === 1 ? "day-start" : ""}">
+                <th class="grid-day">${escapeHtml(day.name)}</th>
+                <th class="grid-period">${period}</th>
+                ${teacherCells}
+            </tr>`;
+        })).join("");
+
+        const table = `<table class="colored-master-grid" data-colored-master-grid="${mode}" style="--grid-font-size:${fontSize}pt;--grid-row-height:${rowHeight}mm">
+            <colgroup><col style="width:7%"><col style="width:4%">${teachers.map(() => "<col>").join("")}</colgroup>
+            <thead><tr><th>اليوم</th><th>ح</th>${teacherHeaders}</tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+        const note = `<p class="colored-grid-note">يظهر داخل كل خلية ${mode === "classes" ? "اسم الفصل فقط" : "اسم المادة فقط"}، ويُعرَّف المعلم باسمه ولونه الثابت.</p>`;
+        return `<section class="print-page colored-master-page" data-report-mode="colored-${mode}">
+            ${reportHeader(title, "الجدول الأسبوعي العام للمدرسة — صفحة واحدة")}
+            ${warning ? `<div class="print-warning">⚠️ ${escapeHtml(warning)}</div>` : ""}
+            ${table}${note}
+        </section>`;
+    }
+
+    function hijriDateParts(dateIso) {
+        const parts = new Intl.DateTimeFormat("en-SA-u-ca-islamic-umalqura", {
+            timeZone: "Asia/Riyadh",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        }).formatToParts(new Date(`${dateIso}T12:00:00`));
+        const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+        return { day: values.day || "", month: values.month || "", year: values.year || "144" };
+    }
+
+    function groupDailyWaitingRecords(records) {
+        const groups = new Map();
+        for (const record of records) {
+            const period = Number(record.period);
+            if (!Number.isInteger(period) || period < 1 || period > 7) {
+                return { ok: false, error: `يوجد سجل انتظار برقم حصة غير صالح: ${record.period}` };
+            }
+            const key = record.absentTeacherId || `name:${record.absentTeacherNameSnapshot || "unknown"}`;
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    key,
+                    absentTeacherId: record.absentTeacherId || "",
+                    absentTeacherName: record.absentTeacherNameSnapshot || "معلم غير معروف",
+                    dayId: record.dayId,
+                    recordsByPeriod: new Map()
+                });
+            }
+            const group = groups.get(key);
+            if (group.dayId !== record.dayId) {
+                return { ok: false, error: `تعارض اليوم الدراسي في سجلات غياب ${group.absentTeacherName}.` };
+            }
+            if (group.recordsByPeriod.has(period)) {
+                return { ok: false, error: `يوجد أكثر من سجل للمعلم ${group.absentTeacherName} في الحصة ${period}.` };
+            }
+            group.recordsByPeriod.set(period, record);
+        }
+        return { ok: true, groups: [...groups.values()] };
+    }
+
+    function officialWaitingAbsentBlock(group, date, hijri) {
+        const dayName = dayById(group.dayId)?.name || group.dayId || "........";
+        const rows = Array.from({ length: 7 }, (_, index) => {
+            const period = index + 1;
+            const record = group.recordsByPeriod.get(period) || null;
+            const substitute = record
+                ? (record.status === "assigned" ? record.substituteTeacherNameSnapshot : "غير مغطاة")
+                : "";
+            const executedWork = record?.executedWorkSnapshot || record?.executedWork || "";
+            const note = record?.note || (record?.status === "uncovered" ? "لم يتم توفير بديل" : "");
+            return `<tr data-waiting-period-row="${period}">
+                <td>${period}</td>
+                <td>${escapeHtml(record?.classNameSnapshot || "")}</td>
+                <td>${escapeHtml(record?.subjectNameSnapshot || "")}</td>
+                <td>${escapeHtml(substitute || "")}</td>
+                <td class="write-space">${escapeHtml(executedWork)}</td>
+                <td class="waiting-signature-cell"></td>
+                <td class="write-space">${escapeHtml(note)}</td>
+            </tr>`;
+        }).join("");
+
+        return `<article class="waiting-absent-block" data-waiting-absent-group data-absent-teacher-id="${escapeHtml(group.absentTeacherId || group.key)}">
+            <div class="waiting-preamble" data-print-preamble>
+                إخواني المعلمين / نظراً لغياب الزميل: <span class="filled-line">${escapeHtml(group.absentTeacherName)}</span>
+                هذا اليوم <span class="filled-line">${escapeHtml(dayName)}</span>
+                الموافق: <span class="filled-line">${escapeHtml(hijri.day)} / ${escapeHtml(hijri.month)} / ${escapeHtml(hijri.year)} هـ</span>
+                نأمل تسديد مكانه حسب الجدول الموضح والتوقيع بالعلم.. ولكم جزيل الشكر
+            </div>
+            <table class="waiting-form-table">
+                <colgroup>
+                    <col style="width:6%"><col style="width:12%"><col style="width:14%"><col style="width:20%"><col style="width:24%"><col style="width:12%"><col style="width:12%">
+                </colgroup>
+                <thead><tr><th>الحصة</th><th>الفصل</th><th>المادة</th><th>المعلم المنتظر</th><th>ما تم تنفيذه في حصة الانتظار</th><th>التوقيع</th><th>ملحوظات</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </article>`;
+    }
+
+    function officialDailyWaitingReport(records, date) {
+        const grouped = groupDailyWaitingRecords(records);
+        if (!grouped.ok) return grouped;
+        const hijri = hijriDateParts(date);
+        const groupsHtml = grouped.groups.length
+            ? grouped.groups.map(group => officialWaitingAbsentBlock(group, date, hijri)).join("")
+            : `<div class="waiting-report-empty">لا توجد سجلات انتظار معتمدة في هذا التاريخ.</div>`;
+        const dayNames = [...new Set(grouped.groups.map(group => dayById(group.dayId)?.name || group.dayId).filter(Boolean))].join("، ");
+        const html = `<section class="print-page official-waiting-page" data-report-mode="official-daily-waiting">
+            <header class="official-waiting-header">
+                <div><strong>${escapeHtml(state.school.name)}</strong><br>العام الدراسي: ${escapeHtml(state.school.academicYear)}</div>
+                <h1>سجل توزيع الانتظار اليومي</h1>
+                <div class="left">اليوم: ${escapeHtml(dayNames || "........")}<br>التاريخ: ${escapeHtml(formatDate(date))}</div>
+            </header>
+            <main>${groupsHtml}</main>
+            <footer class="waiting-report-footer" data-print-footer>وكيل الشؤون التعليمية / ............................ التوقيع: ............................</footer>
+        </section>`;
+        return { ok: true, html, groupCount: grouped.groups.length };
+    }
+
     function ensurePrintableSchedule() {
         if (state.schedule.status !== "success" || !state.schedule.cells.length) {
             showToast("لا يوجد جدول مولّد للطباعة.", "error");
@@ -1600,7 +2025,7 @@
         let html = "";
         let orientation = "landscape";
 
-        if (["all-classes", "all-teachers", "teacher", "class", "stage"].includes(type)) {
+        if (["all-classes", "all-teachers", "teacher", "class", "stage", "colored-classes-only", "colored-subjects-only"].includes(type)) {
             const validation = ensurePrintableSchedule();
             if (!validation) return;
             const warning = validation.warnings[0] || "";
@@ -1647,6 +2072,18 @@
                 title = `جداول ${stage.name}`;
                 html = stage.classes.map(schoolClass => reportPage(`جدول الفصل: ${schoolClass.name}`, stage.name, timetableTable("class", schoolClass.id, indexes, catalog), warning)).join("");
             }
+
+            if (type === "colored-classes-only") {
+                title = "الجدول العام الملون (فصول فقط بدون مادة)";
+                html = coloredGeneralGridPage("classes", indexes, catalog, warning);
+                orientation = "landscape";
+            }
+
+            if (type === "colored-subjects-only") {
+                title = "الجدول العام الملون (مواد فقط بدون فصول)";
+                html = coloredGeneralGridPage("subjects", indexes, catalog, warning);
+                orientation = "landscape";
+            }
         }
 
         if (type === "daily-waiting") {
@@ -1655,19 +2092,11 @@
             const records = state.waiting.archive
                 .filter(record => record.date === date && ["assigned", "uncovered"].includes(record.status))
                 .sort((a, b) => Number(a.period) - Number(b.period) || String(a.classNameSnapshot).localeCompare(String(b.classNameSnapshot), "ar"));
-            const rows = records.length ? records.map(record => `<tr>
-                <td>${escapeHtml(dayById(record.dayId)?.name || record.dayId)}<br><small>${escapeHtml(formatDate(record.date))}</small></td>
-                <td><strong>${escapeHtml(record.subjectNameSnapshot)}</strong><br><small>${escapeHtml(record.classNameSnapshot)}</small></td>
-                <td>الحصة ${Number(record.period)}</td>
-                <td>${escapeHtml(record.absentTeacherNameSnapshot)}</td>
-                <td>${record.status === "assigned" ? escapeHtml(record.substituteTeacherNameSnapshot) : "غير مغطاة"}</td>
-                <td><span class="signature-line"></span></td>
-            </tr>`).join("") : `<tr><td colspan="6" style="height:52px">لا توجد سجلات انتظار معتمدة في هذا التاريخ.</td></tr>`;
             title = "تقرير حصص الانتظار اليومي";
-            const table = `<table class="print-table"><thead><tr><th>اليوم الدراسي</th><th>الحصة الأساسية</th><th>حصة الانتظار</th><th>اسم المعلم الأساسي</th><th>اسم المعلم الانتظار</th><th>التوقيع ✍️</th></tr></thead><tbody>${rows}</tbody></table>`;
-            const covered = records.filter(record => record.status === "assigned").length;
-            const summary = `<div class="print-summary"><div><strong>إجمالي الشواغر</strong><br>${records.length}</div><div><strong>تمت تغطيتها</strong><br>${covered}</div><div><strong>غير مغطاة</strong><br>${records.length - covered}</div></div>`;
-            html = reportPage(title, `التاريخ: ${formatDate(date)}`, table + summary);
+            const report = officialDailyWaitingReport(records, date);
+            if (!report.ok) return showToast(report.error, "error", 6500);
+            html = report.html;
+            orientation = "portrait";
         }
 
         if (type === "cumulative-waiting") {
