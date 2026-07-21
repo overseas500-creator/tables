@@ -1,2387 +1,801 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام الجداول المدرسية وحصص الانتظار</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تقرير حصص الانتظار اليومي</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary: #087f75;
+      --primary-dark: #075e58;
+      --border: #252525;
+      --surface: #ffffff;
+      --background: #eef3f2;
+      --muted: #687575;
+    }
 
-    <style>
-        :root {
-            color-scheme: light;
-            --brand: #0f766e;
-            --brand-dark: #115e59;
-            --ink: #0f172a;
-        }
+    * {
+      box-sizing: border-box;
+    }
 
-        * { box-sizing: border-box; }
+    html {
+      direction: rtl;
+      font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+    }
 
-        body {
-            margin: 0;
-            font-family: Tahoma, Arial, sans-serif;
-            background: #f1f5f9;
-            color: var(--ink);
-        }
+    body {
+      margin: 0;
+      color: #172121;
+      background: var(--background);
+    }
 
-        button, input, select { font: inherit; }
-        button:disabled { cursor: not-allowed; opacity: .5; }
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
 
-        .app-view[hidden] { display: none !important; }
-        .nav-button.active { background: #ffffff; color: #0f766e; box-shadow: 0 8px 24px rgba(15, 23, 42, .14); }
+    .app-shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 32px auto;
+    }
 
-        .schedule-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 16px; background: white; }
-        .schedule-table { width: 100%; min-width: 920px; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
-        .schedule-table th, .schedule-table td { border-left: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 7px; vertical-align: top; }
-        .schedule-table th:last-child, .schedule-table td:last-child { border-left: 0; }
-        .schedule-table tbody tr:last-child td { border-bottom: 0; }
-        .schedule-table th { background: #f8fafc; color: #334155; font-weight: 800; }
-        .schedule-slot { min-height: 86px; transition: background .15s, outline .15s; }
-        .schedule-slot.drop-ready,
-        .schedule-slot.drop-block-start,
-        .schedule-slot.drop-block-tail { background: #f0fdfa; }
-        .schedule-slot.drop-ready,
-        .schedule-slot.drop-block-start { outline: 3px solid #14b8a6; outline-offset: -3px; }
-        .schedule-slot.drop-block-tail { outline: 3px dashed #2dd4bf; outline-offset: -3px; }
-        .schedule-slot.drop-invalid { outline: 3px solid #ef4444; outline-offset: -3px; background: #fef2f2; }
-        .schedule-slot.unavailable { background: #f1f5f9; color: #94a3b8; }
+    /* لوحة التحكم — لا تظهر في الطباعة */
+    .control-panel {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(170px, 1fr));
+      gap: 16px;
+      margin-bottom: 22px;
+      padding: 22px;
+      border: 1px solid #d5e2e0;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 12px 35px rgb(16 67 62 / 8%);
+    }
 
-        .lesson-card { border-radius: 11px; padding: 8px; background: #ecfeff; border: 1px solid #99f6e4; cursor: grab; line-height: 1.45; }
-        .lesson-card:active { cursor: grabbing; }
-        .lesson-card.art { background: #fff7ed; border-color: #fdba74; }
-        .lesson-card.conflict { background: #fef2f2; border-color: #f87171; }
-        .lesson-card.drag-source { opacity: .42; outline: 2px dashed #0f766e; outline-offset: 2px; }
-        .lesson-card + .lesson-card { margin-top: 5px; }
+    .control-panel h1 {
+      grid-column: 1 / -1;
+      margin: 0 0 4px;
+      color: var(--primary-dark);
+      font-size: 24px;
+    }
 
-        .soft-scrollbar::-webkit-scrollbar { width: 9px; height: 9px; }
-        .soft-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+    .control-panel > p {
+      grid-column: 1 / -1;
+      margin: 0 0 8px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
 
-        .report-modal { background: rgba(15, 23, 42, .72); backdrop-filter: blur(6px); }
-        .print-root { direction: rtl; color: #111827; }
-        .print-page { background: white; padding: 12mm; min-height: 190mm; margin: 0 auto 20px; box-shadow: 0 14px 40px rgba(15, 23, 42, .18); }
-        .print-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; border-bottom: 3px double #334155; padding-bottom: 9px; margin-bottom: 14px; }
-        .print-head-side { font-size: 12px; line-height: 1.7; color: #334155; }
-        .print-head-side:last-child { text-align: left; }
-        .print-title { text-align: center; }
-        .print-title h1 { margin: 0; font-size: 22px; color: #0f172a; }
-        .print-title p { margin: 5px 0 0; font-size: 12px; color: #475569; }
-        .print-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; }
-        .print-table th, .print-table td { border: 1px solid #64748b; padding: 6px 5px; text-align: center; vertical-align: middle; overflow-wrap: anywhere; }
-        .print-table th { background: #e2e8f0; font-weight: 800; color: #0f172a; }
-        .print-table .disabled-cell { background: #f1f5f9; color: #94a3b8; }
-        .print-table .conflict-cell { background: #fee2e2; color: #991b1b; font-weight: 800; }
-        .print-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
-        .print-summary > div { border: 1px solid #94a3b8; border-radius: 8px; padding: 8px; text-align: center; }
-        .print-warning { border: 2px solid #f59e0b; color: #92400e; background: #fffbeb; padding: 8px 10px; margin-bottom: 12px; font-size: 12px; font-weight: 700; }
-        .signature-line { display: inline-block; width: 88px; height: 20px; border-bottom: 1px dotted #64748b; }
+    .field {
+      display: grid;
+      gap: 7px;
+    }
 
-        .colored-master-page { padding: 7mm; }
-        .colored-master-grid { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: var(--grid-font-size, 6.2pt); }
-        .colored-master-grid th, .colored-master-grid td { border: 1px solid #475569; padding: 2px; text-align: center; vertical-align: middle; line-height: 1.15; overflow-wrap: anywhere; }
-        .colored-master-grid thead th { background: #dbeafe; color: #0f172a; font-weight: 900; }
-        .colored-master-grid .grid-day { background: #e2e8f0; font-weight: 900; }
-        .colored-master-grid .grid-period { background: #f8fafc; font-weight: 900; }
-        .colored-master-grid .grid-empty { background: #ffffff; color: #cbd5e1; }
-        .colored-master-grid .day-start > * { border-top-width: 2.5px; border-top-color: #0f172a; }
-        .teacher-tinted { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-        .teacher-name-key { display: block; font-weight: 900; line-height: 1.2; }
-        .colored-cell-label { display: block; font-weight: 900; }
-        .colored-grid-note { margin-top: 5px; color: #475569; text-align: center; font-size: 9px; }
+    .field span {
+      font-size: 13px;
+      font-weight: 700;
+    }
 
-        .official-waiting-page { padding: 9mm; font-family: Tahoma, Arial, sans-serif; color: #000; }
-        .official-waiting-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; border-bottom: 1px solid #111827; padding-bottom: 2.5mm; margin-bottom: 2.5mm; font-size: 9pt; }
-        .official-waiting-header h1 { margin: 0; font-size: 14pt; text-align: center; }
-        .official-waiting-header .left { text-align: left; }
-        .waiting-absent-block { margin-top: 3.5mm; break-inside: avoid; page-break-inside: avoid; }
-        .waiting-preamble { margin-bottom: 1.5mm; font-size: 8.7pt; font-weight: 700; line-height: 1.65; text-align: right; }
-        .waiting-preamble .filled-line { display: inline-block; min-width: 25mm; padding: 0 2mm; border-bottom: 1px dotted #111827; text-align: center; font-weight: 900; }
-        .waiting-form-table { width: 100%; border: 2px solid #111827; border-collapse: collapse; table-layout: fixed; font-size: 8pt; }
-        .waiting-form-table th, .waiting-form-table td { border: 1px solid #111827; padding: 1mm; text-align: center; vertical-align: middle; overflow-wrap: normal; word-break: normal; }
-        .waiting-form-table th { background: #d1d5db; font-weight: 900; line-height: 1.25; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-        .waiting-form-table tbody tr { height: 5.4mm; }
-        .waiting-form-table .write-space { text-align: right; }
-        .waiting-signature-cell::after { content: ""; display: block; width: 86%; height: 3.5mm; margin: 0 auto; border-bottom: 1px dotted #111827; }
-        .waiting-report-empty { border: 1px solid #111827; padding: 12mm; text-align: center; font-weight: 700; }
-        .waiting-report-footer { margin-top: 7mm; padding-top: 2mm; border-top: 1px dotted #6b7280; font-size: 10pt; font-weight: 900; text-align: left; break-inside: avoid; page-break-inside: avoid; }
+    .field input {
+      width: 100%;
+      min-height: 44px;
+      padding: 9px 12px;
+      border: 1px solid #c8d6d4;
+      border-radius: 9px;
+      background: #fff;
+      outline: none;
+    }
 
-        @media (max-width: 768px) {
-            .print-page { padding: 18px; min-width: 940px; }
-            .report-preview-scroll { overflow-x: auto; }
-        }
+    .field input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgb(8 127 117 / 12%);
+    }
 
-        @media print {
-            html, body { background: #fff !important; width: 100%; margin: 0 !important; padding: 0 !important; }
-            body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-            #appShell, #toast, .report-modal-toolbar { display: none !important; }
-            #reportModal { display: block !important; position: static !important; inset: auto !important; overflow: visible !important; background: #fff !important; padding: 0 !important; }
-            #reportModal > .report-modal-shell { width: 100% !important; max-width: none !important; height: auto !important; max-height: none !important; margin: 0 !important; border-radius: 0 !important; box-shadow: none !important; overflow: visible !important; }
-            #reportModal .report-preview-scroll { max-height: none !important; overflow: visible !important; padding: 0 !important; }
-            #printRoot { display: block !important; overflow: visible !important; background: #fff !important; padding: 0 !important; }
-            .print-page { width: 100% !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; break-after: page; page-break-after: always; }
-            .print-page:last-child { break-after: auto; page-break-after: auto; }
-            .print-table { font-size: 9.5pt; }
-            .print-table thead { display: table-header-group; }
-            .print-table tr, .print-summary > div { break-inside: avoid; page-break-inside: avoid; }
-            .colored-master-page { height: 190mm !important; max-height: 190mm !important; overflow: hidden !important; }
-            .colored-master-grid { font-size: var(--grid-font-size, 6.2pt) !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-            .colored-master-grid tbody tr { height: var(--grid-row-height, 4mm); }
-            .colored-master-grid th, .colored-master-grid td { padding: .45mm !important; }
-            .official-waiting-page { font-size: 9pt; }
-            .official-waiting-header { break-inside: avoid; page-break-inside: avoid; }
-            .waiting-absent-block { break-inside: avoid-page; page-break-inside: avoid; }
-            .waiting-form-table thead { display: table-header-group; }
-            .waiting-form-table tr { break-inside: avoid; page-break-inside: avoid; }
-            .waiting-form-table th { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-            a { color: inherit !important; text-decoration: none !important; }
-        }
-    </style>
+    .actions {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: flex-start;
+      gap: 10px;
+      margin-top: 6px;
+    }
 
-    <style id="dynamicPrintPageStyle">
-        @page { size: A4 landscape; margin: 10mm; }
-    </style>
+    .button {
+      min-height: 44px;
+      padding: 10px 18px;
+      border: 0;
+      border-radius: 9px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .button-primary {
+      color: #fff;
+      background: var(--primary);
+    }
+
+    .button-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .button-secondary {
+      color: var(--primary-dark);
+      border: 1px solid #b9cecb;
+      background: #f3f8f7;
+    }
+
+    /* الورقة */
+    .report-sheet {
+      display: flex;
+      flex-direction: column;
+      width: min(100%, 180mm);
+      min-height: 250mm;
+      margin-inline: auto;
+      padding: 14mm;
+      border: 1px solid #d5dcdb;
+      background: var(--surface);
+      box-shadow: 0 18px 55px rgb(31 52 50 / 10%);
+    }
+
+    /* الكليشة الرسمية مخفية خارج الطباعة */
+    .print-only {
+      display: none !important;
+    }
+
+    .screen-heading {
+      margin-bottom: 22px;
+      padding-bottom: 14px;
+      border-bottom: 2px solid var(--primary);
+      text-align: center;
+    }
+
+    .screen-heading h2 {
+      margin: 0 0 6px;
+      color: var(--primary-dark);
+      font-size: 24px;
+    }
+
+    .screen-heading p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    /* الهيدر الرسمي */
+    .print-header {
+      direction: ltr;
+      grid-template-columns: minmax(0, 1fr) 42mm minmax(0, 1fr);
+      align-items: start;
+      gap: 8mm;
+      min-height: 34mm;
+      padding-bottom: 5mm;
+      border-bottom: 0.5mm solid #222;
+    }
+
+    .official-identity {
+      grid-column: 3;
+      direction: rtl;
+      text-align: right;
+      font-size: 12pt;
+      font-weight: 700;
+      line-height: 1.75;
+    }
+
+    .official-identity p {
+      margin: 0;
+    }
+
+    .school-print-name {
+      display: block;
+      max-width: 65mm;
+      overflow-wrap: anywhere;
+    }
+
+    .official-logo {
+      grid-column: 2;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      min-height: 30mm;
+      text-align: center;
+    }
+
+    .official-logo img {
+      display: block;
+      width: 37mm;
+      max-height: 30mm;
+      object-fit: contain;
+    }
+
+    .logo-fallback {
+      width: 37mm;
+      min-height: 25mm;
+      padding: 4mm 2mm;
+      border: 0.35mm solid #777;
+      border-radius: 2mm;
+      color: #555;
+      font-size: 10pt;
+      font-weight: 700;
+      line-height: 1.6;
+    }
+
+    .official-meta {
+      grid-column: 1;
+      direction: rtl;
+      text-align: left;
+      font-size: 10.5pt;
+      line-height: 1.7;
+    }
+
+    .official-meta p {
+      margin: 0;
+    }
+
+    .form-code {
+      margin-bottom: 3mm !important;
+      font-size: 8.5pt;
+      font-weight: 700;
+      letter-spacing: 0.15px;
+      white-space: nowrap;
+    }
+
+    .report-title {
+      margin: 8mm 0 6mm;
+      text-align: center;
+    }
+
+    .report-title h1 {
+      display: inline-block;
+      margin: 0;
+      padding: 0 8mm 2mm;
+      border-bottom: 0.45mm solid #222;
+      color: #111;
+      font-size: 17pt;
+      font-weight: 700;
+    }
+
+    .report-title p {
+      margin: 3mm 0 0;
+      color: #444;
+      font-size: 10pt;
+    }
+
+    /* جدول التقرير */
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      color: #111;
+    }
+
+    .report-table th,
+    .report-table td {
+      border: 1px solid var(--border);
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .report-table th {
+      padding: 9px 4px;
+      background: #eaf3f2;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .report-table td {
+      height: 48px;
+      padding: 2px;
+      background: #fff;
+    }
+
+    .report-table .col-number {
+      width: 5%;
+    }
+
+    .report-table .col-absent {
+      width: 19%;
+    }
+
+    .report-table .col-period {
+      width: 8%;
+    }
+
+    .report-table .col-class {
+      width: 13%;
+    }
+
+    .report-table .col-subject {
+      width: 12%;
+    }
+
+    .report-table .col-waiting {
+      width: 19%;
+    }
+
+    .report-table .col-signature {
+      width: 14%;
+    }
+
+    .report-table .col-notes {
+      width: 10%;
+    }
+
+    .cell-input {
+      width: 100%;
+      min-height: 40px;
+      padding: 5px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: transparent;
+      text-align: center;
+      outline: none;
+    }
+
+    .cell-input:focus {
+      border-color: var(--primary);
+      background: #f4faf9;
+    }
+
+    .row-number {
+      font-weight: 700;
+    }
+
+    .remove-row {
+      display: block;
+      width: 23px;
+      height: 23px;
+      margin: 3px auto 0;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      color: #a22222;
+      background: #ffeaea;
+      cursor: pointer;
+      line-height: 23px;
+    }
+
+    /* التوقيع الرسمي */
+    .report-footer {
+      direction: rtl;
+      width: 100%;
+      margin-top: auto;
+      padding-top: 16mm;
+      color: #111;
+      text-align: right;
+      font-size: 11.5pt;
+      font-weight: 700;
+      line-height: 2;
+    }
+
+    .report-footer p {
+      margin: 0;
+      text-align: right;
+    }
+
+    @media (max-width: 760px) {
+      .app-shell {
+        width: min(100% - 16px, 1180px);
+        margin-block: 12px;
+      }
+
+      .control-panel {
+        grid-template-columns: 1fr;
+        padding: 16px;
+      }
+
+      .control-panel h1,
+      .control-panel > p,
+      .actions {
+        grid-column: 1;
+      }
+
+      .report-sheet {
+        padding: 16px;
+      }
+    }
+
+    /* إعدادات الطباعة الرسمية */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 15mm;
+      }
+
+      html,
+      body {
+        width: auto;
+        min-width: 0;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+
+      body {
+        color: #000;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      /* إخفاء جميع عناصر التحكم */
+      .no-print,
+      .control-panel,
+      .screen-heading,
+      .actions,
+      .remove-row {
+        display: none !important;
+      }
+
+      .app-shell {
+        display: block !important;
+        width: 100%;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .report-sheet {
+        display: flex !important;
+        width: 100%;
+        min-height: 267mm;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        background: #fff !important;
+      }
+
+      .print-header.print-only {
+        display: grid !important;
+      }
+
+      .report-footer.print-only {
+        display: block !important;
+      }
+
+      .report-title {
+        margin-top: 7mm;
+      }
+
+      .table-wrap {
+        overflow: visible;
+      }
+
+      .report-table {
+        page-break-inside: auto;
+      }
+
+      .report-table thead {
+        display: table-header-group;
+      }
+
+      .report-table tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .report-table th {
+        padding: 2.5mm 1mm;
+        color: #000 !important;
+        background: #efefef !important;
+        font-size: 9pt;
+      }
+
+      .report-table td {
+        height: 12mm;
+        padding: 0.5mm;
+      }
+
+      .cell-input {
+        min-height: 10mm;
+        padding: 1mm;
+        border: 0 !important;
+        color: #000 !important;
+        background: transparent !important;
+        font-size: 9.5pt;
+        appearance: none;
+        -webkit-appearance: none;
+      }
+
+      input::placeholder {
+        color: transparent !important;
+      }
+    }
+  </style>
 </head>
 
 <body>
-<div id="appShell" class="min-h-screen">
-    <header class="bg-gradient-to-l from-teal-800 via-teal-700 to-cyan-700 text-white shadow-xl">
-        <div class="mx-auto max-w-[1500px] px-4 py-5 lg:px-8">
-            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div>
-                    <p class="text-sm font-bold text-teal-100">منظومة المدرسة الذكية</p>
-                    <h1 class="mt-1 text-2xl font-black md:text-3xl">جداول الحصص وحصص الانتظار</h1>
-                    <p class="mt-2 text-sm text-teal-50/90">توليد بلا تعارضات، إدارة الغياب، وتقارير جاهزة للطباعة</p>
-                </div>
-                <nav class="flex flex-wrap gap-2 rounded-2xl bg-white/10 p-2" aria-label="التنقل الرئيسي">
-                    <button class="nav-button active rounded-xl px-4 py-2.5 text-sm font-extrabold transition" data-view="schedule">📅 الجدول الرئيسي</button>
-                    <button class="nav-button rounded-xl px-4 py-2.5 text-sm font-extrabold transition" data-view="emergency">🚨 الطوارئ والانتظار</button>
-                    <button class="nav-button rounded-xl px-4 py-2.5 text-sm font-extrabold transition" data-view="reports">🖨️ التقارير والطباعة</button>
-                    <button class="nav-button rounded-xl px-4 py-2.5 text-sm font-extrabold transition" data-view="settings">⚙️ الإعدادات والبيانات</button>
-                </nav>
-            </div>
+  <main class="app-shell">
+    <section class="control-panel no-print" aria-labelledby="controls-title">
+      <h1 id="controls-title">إعداد تقرير حصص الانتظار اليومي</h1>
+      <p>
+        أدخل بيانات المدرسة واليوم، ثم عبّئ جدول الحصص. عند الطباعة ستختفي
+        لوحة التحكم وتظهر الكليشة الرسمية والتوقيع تلقائياً.
+      </p>
+
+      <label class="field">
+        <span>اسم المدرسة</span>
+        <input
+          id="school-input"
+          type="text"
+          maxlength="120"
+          placeholder="مثال: مدرسة الأفق المتوسطة"
+          autocomplete="organization"
+        >
+      </label>
+
+      <label class="field">
+        <span>اليوم</span>
+        <input id="day-input" type="text" maxlength="30">
+      </label>
+
+      <label class="field">
+        <span>التاريخ</span>
+        <input id="date-input" type="text" maxlength="40">
+      </label>
+
+      <div class="actions">
+        <button id="print-button" class="button button-primary" type="button">
+          طباعة التقرير اليومي
+        </button>
+
+        <button id="add-row-button" class="button button-secondary" type="button">
+          إضافة حصة
+        </button>
+      </div>
+    </section>
+
+    <article id="daily-report" class="report-sheet" aria-labelledby="report-title">
+      <!-- يظهر هذا الهيدر في الطباعة فقط -->
+      <header class="print-header print-only">
+        <div class="official-identity">
+          <p>المملكة العربية السعودية</p>
+          <p>وزارة التعليم</p>
+          <p id="print-school-name" class="school-print-name">
+            ........................................................
+          </p>
         </div>
-    </header>
 
-    <main class="mx-auto max-w-[1500px] px-4 py-6 lg:px-8">
-        <section id="view-schedule" class="app-view">
-            <div class="mb-5 flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h2 class="text-xl font-black text-slate-900">لوحة الجدول الأسبوعي</h2>
-                    <p id="scheduleStatus" class="mt-1 text-sm text-slate-500">لم يتم توليد الجدول بعد.</p>
-                </div>
-                <div class="flex flex-wrap items-end gap-2">
-                    <label class="text-sm font-bold text-slate-700">
-                        عرض المرحلة
-                        <select id="scheduleStageFilter" class="mt-1 block rounded-xl border border-slate-300 bg-white px-3 py-2 outline-none focus:border-teal-600"></select>
-                    </label>
-                    <button id="generateScheduleTop" class="rounded-xl bg-teal-700 px-4 py-2.5 font-extrabold text-white shadow hover:bg-teal-800">⚡ توليد الجدول</button>
-                    <button id="openClassReportsTop" class="rounded-xl border border-teal-700 px-4 py-2.5 font-extrabold text-teal-800 hover:bg-teal-50">🖨️ طباعة حسب الفصول</button>
-                </div>
-            </div>
-            <div id="scheduleBoard" class="space-y-6"></div>
-        </section>
+        <div class="official-logo">
+          <img
+            id="moe-logo"
+            src="https://drive.google.com/thumbnail?id=1gXEAQdA1pmTdKUid_oLFsEba3UDqzgJb&sz=w1000"
+            alt="شعار وزارة التعليم السعودية"
+            referrerpolicy="no-referrer"
+          >
 
-        <section id="view-emergency" class="app-view" hidden>
-            <div class="grid gap-6 xl:grid-cols-[390px_1fr]">
-                <aside class="h-fit rounded-2xl bg-white p-5 shadow-sm">
-                    <div class="rounded-xl bg-red-50 p-4 text-red-900">
-                        <h2 class="text-xl font-black">🚨 تسجيل غياب يومي</h2>
-                        <p class="mt-1 text-sm">تُحسب الاقتراحات تلقائيًا وفق الأقل في: الأساسي الأسبوعي + الانتظار المؤرشف.</p>
-                    </div>
-
-                    <div class="mt-5 space-y-4">
-                        <label class="block text-sm font-bold text-slate-700">التاريخ
-                            <input id="absenceDate" type="date" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 outline-none focus:border-red-500">
-                        </label>
-                        <label class="block text-sm font-bold text-slate-700">اليوم الدراسي
-                            <select id="absenceDay" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-red-500"></select>
-                        </label>
-                        <label class="block text-sm font-bold text-slate-700">المعلم الغائب
-                            <select id="absentTeacher" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-red-500"></select>
-                        </label>
-                        <button id="previewAbsence" class="w-full rounded-xl bg-red-600 px-4 py-3 font-black text-white hover:bg-red-700">🔎 تحليل الحصص واقتراح البدلاء</button>
-                        <button id="commitWaiting" class="hidden w-full rounded-xl bg-teal-700 px-4 py-3 font-black text-white hover:bg-teal-800">✅ اعتماد المقترحات وحفظها في الأرشيف</button>
-                    </div>
-
-                    <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-900">
-                        المعاينة لا تغيّر العدادات. الزيادة والحفظ يحدثان مرة واحدة فقط عند الاعتماد، مع منع تكرار تغطية الحصة نفسها.
-                    </div>
-                </aside>
-
-                <div>
-                    <div id="waitingSummary" class="mb-4 grid gap-3 sm:grid-cols-3"></div>
-                    <div id="vacanciesBoard" class="rounded-2xl bg-white p-5 shadow-sm">
-                        <div class="py-14 text-center text-slate-500">اختر معلماً غائباً لعرض حصصه الشاغرة ومقترحات التغطية.</div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="view-reports" class="app-view" hidden>
-            <div class="mb-5 rounded-2xl bg-gradient-to-l from-slate-900 to-slate-700 p-6 text-white shadow-lg">
-                <h2 class="text-2xl font-black">🖨️ مركز الطباعة والتقارير الاحترافية</h2>
-                <p class="mt-2 text-sm text-slate-200">تُفتح كل نتيجة في نافذة معاينة مستقلة، ثم تُطبع وحدها دون الأزرار أو شريط التنقل.</p>
-            </div>
-
-            <div class="grid gap-6 xl:grid-cols-2">
-                <section class="rounded-2xl bg-white p-5 shadow-sm">
-                    <h3 class="text-lg font-black text-slate-900">جداول المدرسة العامة</h3>
-                    <p class="mt-1 text-sm text-slate-500">صفحة مستقلة لكل فصل أو معلم، مرتبة أبجديًا.</p>
-                    <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                        <button data-report="all-classes" class="rounded-2xl border border-teal-200 bg-teal-50 p-4 text-right font-black text-teal-900 transition hover:-translate-y-0.5 hover:shadow">🏫 الجدول العام بترتيب الفصول</button>
-                        <button data-report="all-teachers" class="rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-right font-black text-cyan-900 transition hover:-translate-y-0.5 hover:shadow">👩‍🏫 الجدول العام بترتيب المعلمين</button>
-                        <button data-report="colored-classes-only" class="rounded-2xl border border-fuchsia-200 bg-fuchsia-50 p-4 text-right font-black text-fuchsia-900 transition hover:-translate-y-0.5 hover:shadow">الجدول العام الملون (فصول فقط بدون مادة)</button>
-                        <button data-report="colored-subjects-only" class="rounded-2xl border border-violet-200 bg-violet-50 p-4 text-right font-black text-violet-900 transition hover:-translate-y-0.5 hover:shadow">الجدول العام الملون (مواد فقط بدون فصول)</button>
-                    </div>
-                </section>
-
-                <section class="rounded-2xl bg-white p-5 shadow-sm">
-                    <h3 class="text-lg font-black text-slate-900">الجداول المنفردة</h3>
-                    <div class="mt-4 grid gap-4 sm:grid-cols-2">
-                        <label class="text-sm font-bold text-slate-700">اسم المعلم
-                            <select id="reportTeacherSelect" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5"></select>
-                            <button data-report="teacher" class="mt-2 w-full rounded-xl bg-teal-700 px-3 py-2.5 font-black text-white hover:bg-teal-800">طباعة جدول المعلم</button>
-                        </label>
-                        <label class="text-sm font-bold text-slate-700">الفصل
-                            <select id="reportClassSelect" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5"></select>
-                            <button data-report="class" class="mt-2 w-full rounded-xl bg-cyan-700 px-3 py-2.5 font-black text-white hover:bg-cyan-800">طباعة جدول الفصل</button>
-                        </label>
-                    </div>
-                </section>
-
-                <section class="rounded-2xl bg-white p-5 shadow-sm">
-                    <h3 class="text-lg font-black text-slate-900">جداول المراحل الدراسية</h3>
-                    <p class="mt-1 text-sm text-slate-500">جميع فصول المرحلة المحددة، مع صفحة مستقلة لكل فصل.</p>
-                    <div class="mt-4 flex flex-col gap-2 sm:flex-row">
-                        <select id="reportStageSelect" class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2.5"></select>
-                        <button data-report="stage" class="rounded-xl bg-indigo-700 px-4 py-2.5 font-black text-white hover:bg-indigo-800">طباعة المرحلة كاملة</button>
-                    </div>
-                </section>
-
-                <section class="rounded-2xl bg-white p-5 shadow-sm">
-                    <h3 class="text-lg font-black text-slate-900">تقرير حصص الانتظار اليومي</h3>
-                    <p class="mt-1 text-sm text-slate-500">نموذج رسمي من سبعة صفوف، مع جدول مستقل متتالٍ لكل معلم غائب.</p>
-                    <div class="mt-4 flex flex-col gap-2 sm:flex-row">
-                        <input id="dailyReportDate" type="date" class="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5">
-                        <button data-report="daily-waiting" class="rounded-xl bg-amber-600 px-4 py-2.5 font-black text-white hover:bg-amber-700">طباعة التقرير اليومي</button>
-                    </div>
-                </section>
-
-                <section class="rounded-2xl bg-white p-5 shadow-sm xl:col-span-2">
-                    <h3 class="text-lg font-black text-slate-900">تقرير الانتظار التراكمي للمعلم</h3>
-                    <p class="mt-1 text-sm text-slate-500">ابحث باسم المعلم لعرض كل التواريخ والحصص التي غطاها، ثم المجموع التراكمي النهائي.</p>
-                    <div class="mt-4 flex flex-col gap-2 md:flex-row">
-                        <input id="cumulativeTeacherSearch" list="teacherNamesList" placeholder="اكتب اسم المعلم..." class="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5">
-                        <datalist id="teacherNamesList"></datalist>
-                        <button data-report="cumulative-waiting" class="rounded-xl bg-violet-700 px-5 py-2.5 font-black text-white hover:bg-violet-800">بحث ومعاينة التقرير</button>
-                    </div>
-                </section>
-            </div>
-        </section>
-
-        <section id="view-settings" class="app-view" hidden>
-            <div class="mb-5 rounded-2xl bg-white p-5 shadow-sm">
-                <h2 class="text-2xl font-black text-slate-900">⚙️ لوحة الإعدادات والبيانات الأساسية للمدرسة</h2>
-                <p class="mt-1 text-sm text-slate-500">كل تعديل ينعكس فورًا على القوائم والتوليد والتقارير.</p>
-            </div>
-
-            <div class="grid gap-6 xl:grid-cols-2">
-                <section class="rounded-2xl bg-white p-5 shadow-sm">
-                    <h3 class="text-lg font-black">بيانات المدرسة</h3>
-                    <div class="mt-4 grid gap-3 sm:grid-cols-3">
-                        <label class="text-sm font-bold">اسم المدرسة<input id="schoolName" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" type="text"></label>
-                        <label class="text-sm font-bold">العام الدراسي<input id="academicYear" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" type="text"></label>
-                        <label class="text-sm font-bold">مدير/ة المدرسة<input id="principalName" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" type="text"></label>
-                    </div>
-                </section>
-
-                <section class="rounded-2xl bg-white p-5 shadow-sm">
-                    <h3 class="text-lg font-black">سعة اليوم الدراسي</h3>
-                    <div class="mt-4 flex flex-col gap-2 sm:flex-row">
-                        <input id="masterPeriods" type="number" min="1" max="12" value="7" class="w-full rounded-xl border border-slate-300 px-3 py-2 sm:w-28">
-                        <button id="applyPeriodsToAll" class="flex-1 rounded-xl bg-slate-800 px-4 py-2 font-black text-white hover:bg-slate-900">🔁 تطبيق هذا العدد على جميع أيام الأسبوع</button>
-                    </div>
-                    <div id="dayCapacityInputs" class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5"></div>
-                </section>
-
-                <section class="rounded-2xl bg-white p-5 shadow-sm xl:col-span-2">
-                    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                            <h3 class="text-lg font-black">المعلمون واستيراد Excel</h3>
-                            <p class="text-sm text-slate-500">العناوين المطلوبة حرفيًا: اسم المعلم، رقم الهوية، رقم الجوال.</p>
-                        </div>
-                        <label class="cursor-pointer rounded-xl bg-emerald-700 px-4 py-2.5 font-black text-white hover:bg-emerald-800">
-                            📥 استيراد المعلمين من Excel
-                            <input id="teacherExcelFile" type="file" accept=".xlsx,.xls,.csv" class="hidden">
-                        </label>
-                    </div>
-                    <form id="teacherForm" class="mt-5 grid gap-3 rounded-xl bg-slate-50 p-4 md:grid-cols-[1fr_1fr_1fr_auto]">
-                        <input id="teacherEditId" type="hidden">
-                        <input id="teacherName" required placeholder="اسم المعلم" class="rounded-xl border border-slate-300 px-3 py-2">
-                        <input id="teacherIdentity" required placeholder="رقم الهوية" inputmode="numeric" class="rounded-xl border border-slate-300 px-3 py-2" dir="ltr">
-                        <input id="teacherMobile" required placeholder="رقم الجوال" inputmode="tel" class="rounded-xl border border-slate-300 px-3 py-2" dir="ltr">
-                        <button class="rounded-xl bg-teal-700 px-5 py-2 font-black text-white">حفظ المعلم</button>
-                    </form>
-                    <div id="teachersTable" class="mt-4 overflow-x-auto"></div>
-                </section>
-
-                <section class="rounded-2xl bg-white p-5 shadow-sm xl:col-span-2">
-                    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                        <label class="text-sm font-bold">المرحلة الجاري تعديلها
-                            <select id="settingsStageSelect" class="mt-1 block min-w-64 rounded-xl border border-slate-300 bg-white px-3 py-2.5"></select>
-                        </label>
-                        <button id="addStage" class="rounded-xl border border-slate-400 px-4 py-2.5 font-black text-slate-700 hover:bg-slate-50">➕ إضافة مرحلة</button>
-                    </div>
-
-                    <div class="mt-5 grid gap-6 xl:grid-cols-2">
-                        <div class="rounded-xl border border-slate-200 p-4">
-                            <h4 class="font-black">الفصول</h4>
-                            <div class="mt-3 flex gap-2">
-                                <input id="newClassName" placeholder="اسم الفصل الجديد" class="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2">
-                                <button id="addClass" class="rounded-xl bg-teal-700 px-4 py-2 font-black text-white">إضافة</button>
-                            </div>
-                            <div id="classesList" class="mt-4 space-y-2"></div>
-                            <div class="mt-4 border-t border-slate-200 pt-4">
-                                <select id="copyClassesTarget" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2"></select>
-                                <button id="copyClasses" class="mt-2 w-full rounded-xl bg-indigo-700 px-3 py-2.5 font-black text-white">📋 نسخ هذه الفصول إلى مرحلة أخرى</button>
-                            </div>
-                        </div>
-
-                        <div class="rounded-xl border border-slate-200 p-4">
-                            <h4 class="font-black">المواد والأنصبة</h4>
-                            <div class="mt-3 grid gap-2 sm:grid-cols-[1fr_90px_110px_auto]">
-                                <input id="newSubjectName" placeholder="اسم المادة" class="rounded-xl border border-slate-300 px-3 py-2">
-                                <input id="newSubjectQuota" type="number" min="1" max="10" value="2" class="rounded-xl border border-slate-300 px-3 py-2">
-                                <label class="flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2"><input id="newSubjectArt" type="checkbox"> فنية</label>
-                                <button id="addSubject" class="rounded-xl bg-teal-700 px-4 py-2 font-black text-white">إضافة</button>
-                            </div>
-                            <div id="subjectsList" class="mt-4 space-y-3"></div>
-                            <div class="mt-4 border-t border-slate-200 pt-4">
-                                <select id="copySubjectsTarget" class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2"></select>
-                                <button id="copySubjects" class="mt-2 w-full rounded-xl bg-violet-700 px-3 py-2.5 font-black text-white">📋 نسخ هذه المواد بنصابها إلى مرحلة أخرى</button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="rounded-2xl border-2 border-teal-200 bg-teal-50 p-6 text-center xl:col-span-2">
-                    <h3 class="text-xl font-black text-teal-950">جاهز لبناء جدول جديد من البيانات الحالية؟</h3>
-                    <p class="mt-1 text-sm text-teal-800">لن يُستبدل الجدول الحالي إلا بعد نجاح التوليد والتحقق الكامل.</p>
-                    <button id="generateScheduleSettings" class="mt-4 rounded-2xl bg-teal-700 px-8 py-3 text-lg font-black text-white shadow-lg hover:bg-teal-800">⚡ توليد الجدول المدرسي</button>
-                </section>
-            </div>
-        </section>
-    </main>
-</div>
-
-<div id="toast" class="pointer-events-none fixed bottom-5 left-1/2 z-[100] hidden -translate-x-1/2 rounded-2xl px-5 py-3 text-center font-bold text-white shadow-2xl" role="status" aria-live="polite"></div>
-
-<div id="reportModal" class="report-modal fixed inset-0 z-[90] hidden overflow-y-auto p-3 md:p-6" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
-    <div class="report-modal-shell mx-auto max-w-[1500px] overflow-hidden rounded-2xl bg-slate-100 shadow-2xl">
-        <div class="report-modal-toolbar sticky top-0 z-10 flex flex-col gap-3 border-b border-slate-200 bg-white p-4 md:flex-row md:items-center md:justify-between">
-            <div>
-                <h2 id="reportModalTitle" class="text-lg font-black text-slate-900">معاينة التقرير</h2>
-                <p id="reportModalHint" class="text-xs text-slate-500">راجع البيانات ثم اختر طباعة أو حفظ PDF.</p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <button id="closeReportModal" class="rounded-xl border border-slate-300 px-4 py-2 font-black text-slate-700 hover:bg-slate-50">إغلاق</button>
-                <button id="printCurrentReport" class="rounded-xl bg-teal-700 px-5 py-2 font-black text-white hover:bg-teal-800">🖨️ طباعة / حفظ PDF</button>
-            </div>
+          <div id="logo-fallback" class="logo-fallback" hidden>
+            وزارة التعليم<br>
+            Ministry of Education
+          </div>
         </div>
-        <div class="report-preview-scroll soft-scrollbar max-h-[calc(100vh-110px)] overflow-auto p-4 md:p-6">
-            <div id="printRoot" class="print-root"></div>
+
+        <div class="official-meta">
+          <p class="form-code">(و.ت.ع.ن -01-01)</p>
+          <p>اليوم: <strong id="print-day">....................</strong></p>
+          <p>التاريخ: <strong id="print-date">....................</strong></p>
         </div>
-    </div>
-</div>
+      </header>
 
-<script>
-(() => {
-    "use strict";
+      <!-- عنوان مبسط يظهر على الشاشة فقط -->
+      <header class="screen-heading no-print">
+        <h2>تقرير حصص الانتظار اليومي</h2>
+        <p>معاينة وإدخال بيانات التقرير قبل الطباعة الرسمية</p>
+      </header>
 
-    const WEEK_DAYS = [
-        { id: "sun", name: "الأحد", periods: 7 },
-        { id: "mon", name: "الاثنين", periods: 7 },
-        { id: "tue", name: "الثلاثاء", periods: 7 },
-        { id: "wed", name: "الأربعاء", periods: 7 },
-        { id: "thu", name: "الخميس", periods: 6 }
-    ];
+      <section class="report-title">
+        <h1 id="report-title">تقرير حصص الانتظار اليومي</h1>
+        <p class="print-only">
+          تنظيم تغطية الحصص أثناء غياب شاغلي الوظائف التعليمية
+        </p>
+      </section>
 
-    const DEFAULT_TEACHERS = [
-        { id: "t-ahmed", name: "أحمد سالم", identity: "1010000001", mobile: "0501000001" },
-        { id: "t-noura", name: "نورة محمد", identity: "1010000002", mobile: "0501000002" },
-        { id: "t-khaled", name: "خالد علي", identity: "1010000003", mobile: "0501000003" },
-        { id: "t-mona", name: "منى حسن", identity: "1010000004", mobile: "0501000004" },
-        { id: "t-yousef", name: "يوسف عمر", identity: "1010000005", mobile: "0501000005" },
-        { id: "t-sara", name: "سارة عبدالله", identity: "1010000006", mobile: "0501000006" },
-        { id: "t-reem", name: "ريم صالح", identity: "1010000007", mobile: "0501000007" },
-        { id: "t-fahad", name: "فهد منصور", identity: "1010000008", mobile: "0501000008" }
-    ];
+      <div class="table-wrap">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th class="col-number">م</th>
+              <th class="col-absent">اسم المعلم/ـة الغائب/ـة</th>
+              <th class="col-period">الحصة</th>
+              <th class="col-class">الصف / الفصل</th>
+              <th class="col-subject">المادة</th>
+              <th class="col-waiting">اسم المعلم/ـة المنتظر/ـة</th>
+              <th class="col-signature">التوقيع</th>
+              <th class="col-notes">ملاحظات</th>
+            </tr>
+          </thead>
 
-    function makeSubjects(prefix, classIds) {
-        const definitions = [
-            ["math", "الرياضيات", 4, false, "t-ahmed"],
-            ["arabic", "اللغة العربية", 4, false, "t-khaled"],
-            ["science", "العلوم", 3, false, "t-noura"],
-            ["english", "اللغة الإنجليزية", 3, false, "t-mona"],
-            ["islamic", "الدراسات الإسلامية", 2, false, "t-yousef"],
-            ["art", "التربية الفنية", 2, true, "t-sara"],
-            ["pe", "التربية البدنية", 2, false, "t-fahad"]
-        ];
+          <tbody id="report-rows"></tbody>
+        </table>
+      </div>
 
-        return definitions.map(([suffix, name, quota, isArt, teacherId]) => ({
-            id: `${prefix}-${suffix}`,
-            name,
-            quota,
-            isArt,
-            teacherByClass: Object.fromEntries(classIds.map(classId => [classId, teacherId]))
-        }));
-    }
+      <!-- يظهر هذا التذييل في الطباعة فقط -->
+      <footer class="report-footer print-only">
+        <p>
+          وكيل الشؤون التعليمية / ............................
+          &nbsp;&nbsp;&nbsp;&nbsp;
+          التوقيع: ............................
+        </p>
+      </footer>
+    </article>
+  </main>
 
-    const primaryClasses = [
-        { id: "p-1a", name: "الصف الأول / أ" },
-        { id: "p-1b", name: "الصف الأول / ب" }
-    ];
-    const middleClasses = [
-        { id: "m-1a", name: "الأول المتوسط / أ" },
-        { id: "m-1b", name: "الأول المتوسط / ب" }
-    ];
-    const secondaryClasses = [
-        { id: "s-1a", name: "الأول الثانوي / أ" }
-    ];
+  <template id="row-template">
+    <tr>
+      <td>
+        <span class="row-number"></span>
+        <button
+          class="remove-row no-print"
+          type="button"
+          title="حذف هذا الصف"
+          aria-label="حذف الصف"
+        >×</button>
+      </td>
 
-    const state = {
-        dataRevision: 1,
-        school: {
-            name: "مدرسة المستقبل النموذجية",
-            academicYear: "1448 هـ",
-            principal: ""
-        },
-        teachers: structuredCloneSafe(DEFAULT_TEACHERS),
-        days: structuredCloneSafe(WEEK_DAYS),
-        stages: [
-            { id: "primary", name: "المرحلة الابتدائية", classes: primaryClasses, subjects: makeSubjects("p", primaryClasses.map(item => item.id)) },
-            { id: "middle", name: "المرحلة المتوسطة", classes: middleClasses, subjects: makeSubjects("m", middleClasses.map(item => item.id)) },
-            { id: "secondary", name: "المرحلة الثانوية", classes: secondaryClasses, subjects: makeSubjects("s", secondaryClasses.map(item => item.id)) }
-        ],
-        schedule: {
-            status: "empty",
-            sourceRevision: 0,
-            manualRevision: 0,
-            generatedAt: null,
-            cells: []
-        },
-        waiting: {
-            archive: [],
-            activePreview: null
-        },
-        ui: {
-            activeView: "schedule",
-            scheduleStage: "all",
-            settingsStageId: "primary",
-            currentReportTitle: "",
-            currentReportOrientation: "landscape"
-        }
-    };
+      <td>
+        <input class="cell-input" type="text" aria-label="اسم المعلم الغائب">
+      </td>
 
-    const elements = {};
-    let toastTimer = null;
-    let activeDrag = null;
-    let lastDropPreviewKey = "";
-    let archiveLoadWarning = "";
+      <td>
+        <input class="cell-input" type="text" aria-label="رقم الحصة">
+      </td>
 
-    function structuredCloneSafe(value) {
-        return typeof structuredClone === "function"
-            ? structuredClone(value)
-            : JSON.parse(JSON.stringify(value));
-    }
+      <td>
+        <input class="cell-input" type="text" aria-label="الصف والفصل">
+      </td>
 
-    function newId(prefix) {
-        const token = globalThis.crypto && typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-        return `${prefix}-${token}`;
-    }
+      <td>
+        <input class="cell-input" type="text" aria-label="المادة">
+      </td>
 
-    function escapeHtml(value) {
-        return String(value ?? "")
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
-    }
+      <td>
+        <input class="cell-input" type="text" aria-label="اسم المعلم المنتظر">
+      </td>
 
-    function normalizeDigits(value) {
-        return String(value ?? "")
-            .replace(/[٠-٩]/g, digit => "0123456789"["٠١٢٣٤٥٦٧٨٩".indexOf(digit)])
-            .replace(/[۰-۹]/g, digit => "0123456789"["۰۱۲۳۴۵۶۷۸۹".indexOf(digit)]);
-    }
+      <td>
+        <input class="cell-input" type="text" aria-label="التوقيع">
+      </td>
 
-    function normalizeArabicSearch(value) {
-        return normalizeDigits(value)
-            .normalize("NFKD")
-            .replace(/[\u064B-\u065F\u0670]/g, "")
-            .replace(/[أإآ]/g, "ا")
-            .replace(/ى/g, "ي")
-            .replace(/ة/g, "ه")
-            .trim()
-            .toLowerCase();
-    }
+      <td>
+        <input class="cell-input" type="text" aria-label="الملاحظات">
+      </td>
+    </tr>
+  </template>
 
-    function showToast(message, type = "success", duration = 3800) {
-        const colors = {
-            success: "bg-emerald-700",
-            error: "bg-red-700",
-            warning: "bg-amber-600",
-            info: "bg-slate-800"
-        };
-        clearTimeout(toastTimer);
-        elements.toast.className = `pointer-events-none fixed bottom-5 left-1/2 z-[100] -translate-x-1/2 rounded-2xl px-5 py-3 text-center font-bold text-white shadow-2xl ${colors[type] || colors.info}`;
-        elements.toast.textContent = message;
-        elements.toast.classList.remove("hidden");
-        toastTimer = setTimeout(() => elements.toast.classList.add("hidden"), duration);
-    }
+  <script>
+    (() => {
+      "use strict";
 
-    function riyadhDate(date = new Date()) {
-        const parts = new Intl.DateTimeFormat("en-US", {
-            timeZone: "Asia/Riyadh",
-            year: "numeric",
+      const schoolInput = document.getElementById("school-input");
+      const dayInput = document.getElementById("day-input");
+      const dateInput = document.getElementById("date-input");
+      const printSchoolName = document.getElementById("print-school-name");
+      const printDay = document.getElementById("print-day");
+      const printDate = document.getElementById("print-date");
+      const rowsContainer = document.getElementById("report-rows");
+      const rowTemplate = document.getElementById("row-template");
+      const addRowButton = document.getElementById("add-row-button");
+      const printButton = document.getElementById("print-button");
+      const logo = document.getElementById("moe-logo");
+      const logoFallback = document.getElementById("logo-fallback");
+
+      const today = new Date();
+
+      dayInput.value = new Intl.DateTimeFormat("ar-SA", {
+        weekday: "long"
+      }).format(today);
+
+      try {
+        dateInput.value =
+          new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
+            day: "2-digit",
             month: "2-digit",
-            day: "2-digit"
-        }).formatToParts(date);
-        const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
-        return `${values.year}-${values.month}-${values.day}`;
-    }
-
-    function offsetDate(baseIso, offsetDays) {
-        const date = new Date(`${baseIso}T12:00:00`);
-        date.setDate(date.getDate() + offsetDays);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
-    }
-
-    function dayIdFromDate(dateIso) {
-        const dayNumber = new Date(`${dateIso}T12:00:00`).getDay();
-        return ({ 0: "sun", 1: "mon", 2: "tue", 3: "wed", 4: "thu" })[dayNumber] || "sun";
-    }
-
-    function formatDate(dateIso) {
-        if (!dateIso) return "—";
-        return new Intl.DateTimeFormat("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit" })
-            .format(new Date(`${dateIso}T12:00:00`));
-    }
-
-    function stageById(id) { return state.stages.find(item => item.id === id) || null; }
-    function teacherById(id) { return state.teachers.find(item => item.id === id) || null; }
-    function dayById(id) { return state.days.find(item => item.id === id) || null; }
-
-    function classContext(classId) {
-        for (const stage of state.stages) {
-            const schoolClass = stage.classes.find(item => item.id === classId);
-            if (schoolClass) return { stage, schoolClass };
-        }
-        return null;
-    }
-
-    function subjectContext(stageId, subjectId) {
-        const stage = stageById(stageId);
-        if (!stage) return null;
-        const subject = stage.subjects.find(item => item.id === subjectId);
-        return subject ? { stage, subject } : null;
-    }
-
-    function allClasses() {
-        return state.stages.flatMap(stage => stage.classes.map(schoolClass => ({ ...schoolClass, stageId: stage.id, stageName: stage.name })));
-    }
-
-    function markStructuralChange(message = "تم تحديث البيانات الأساسية.") {
-        state.dataRevision += 1;
-        state.waiting.activePreview = null;
-        renderAllSelectors();
-        renderScheduleStatus();
-        showToast(`${message} أعد توليد الجدول لاعتماد التغيير.`, "warning");
-    }
-
-    function scheduleIsStale() {
-        return state.schedule.status === "success" && state.schedule.sourceRevision !== state.dataRevision;
-    }
-
-    function buildCatalog() {
-        const teachers = new Map(state.teachers.map(item => [item.id, item]));
-        const stages = new Map(state.stages.map(item => [item.id, item]));
-        const classes = new Map();
-        const subjects = new Map();
-
-        for (const stage of state.stages) {
-            for (const schoolClass of stage.classes) classes.set(schoolClass.id, { ...schoolClass, stageId: stage.id, stageName: stage.name });
-            for (const subject of stage.subjects) subjects.set(`${stage.id}|${subject.id}`, subject);
-        }
-
-        return { teachers, stages, classes, subjects };
-    }
-
-    function buildScheduleIndexes(cells = state.schedule.cells) {
-        const indexes = {
-            byClassSlot: new Map(),
-            byTeacherSlot: new Map(),
-            byClass: new Map(),
-            byTeacher: new Map(),
-            byLesson: new Map()
-        };
-
-        const add = (map, key, cell) => {
-            if (!map.has(key)) map.set(key, []);
-            map.get(key).push(cell);
-        };
-
-        for (const cell of cells) {
-            add(indexes.byClassSlot, `${cell.classId}|${cell.dayId}|${cell.period}`, cell);
-            add(indexes.byTeacherSlot, `${cell.teacherId}|${cell.dayId}|${cell.period}`, cell);
-            add(indexes.byClass, cell.classId, cell);
-            add(indexes.byTeacher, cell.teacherId, cell);
-            add(indexes.byLesson, cell.lessonId, cell);
-        }
-        return indexes;
-    }
-
-    function decorateCell(cell, catalog = buildCatalog()) {
-        const schoolClass = catalog.classes.get(cell.classId);
-        const stageId = schoolClass?.stageId || cell.stageId;
-        const subject = catalog.subjects.get(`${stageId}|${cell.subjectId}`);
-        const teacher = catalog.teachers.get(cell.teacherId);
-        return {
-            ...cell,
-            stageId,
-            stageName: schoolClass?.stageName || "مرحلة غير معروفة",
-            className: schoolClass?.name || `[فصل محذوف: ${cell.classId}]`,
-            subjectName: subject?.name || `[مادة محذوفة: ${cell.subjectId}]`,
-            teacherName: teacher?.name || `[معلم محذوف: ${cell.teacherId}]`,
-            isArt: Boolean(subject?.isArt)
-        };
-    }
-
-    function validateSchedule(cells = state.schedule.cells, includeStale = true) {
-        const errors = [];
-        const warnings = [];
-        const catalog = buildCatalog();
-        const indexes = buildScheduleIndexes(cells);
-        const seenCellIds = new Set();
-        const normalSubjectDays = new Set();
-        const artLessonsBySubjectDay = new Map();
-
-        if (includeStale && scheduleIsStale()) {
-            warnings.push("تغيّرت البيانات الأساسية بعد توليد الجدول؛ التقرير يحمل علامة مسودة حتى إعادة التوليد.");
-        }
-
-        for (const cell of cells) {
-            if (seenCellIds.has(cell.cellId)) errors.push(`معرّف خلية مكرر: ${cell.cellId}`);
-            seenCellIds.add(cell.cellId);
-
-            const schoolClass = catalog.classes.get(cell.classId);
-            const teacher = catalog.teachers.get(cell.teacherId);
-            const day = dayById(cell.dayId);
-            const stageId = schoolClass?.stageId || cell.stageId;
-            const subject = catalog.subjects.get(`${stageId}|${cell.subjectId}`);
-
-            if (!schoolClass) errors.push(`الفصل المشار إليه غير موجود: ${cell.classId}`);
-            if (!teacher) errors.push(`المعلم المشار إليه غير موجود: ${cell.teacherId}`);
-            if (!subject) errors.push(`المادة المشار إليها غير موجودة: ${cell.subjectId}`);
-            if (!day || !Number.isInteger(cell.period) || cell.period < 1 || cell.period > Number(day?.periods || 0)) {
-                errors.push(`حصة خارج سعة اليوم في الخلية ${cell.cellId}`);
-            }
-
-            if (subject && !subject.isArt) {
-                const key = `${cell.classId}|${cell.subjectId}|${cell.dayId}`;
-                if (normalSubjectDays.has(key)) errors.push("يوجد حصة لنفس المادة في نفس الفصل في نفس اليوم");
-                normalSubjectDays.add(key);
-            }
-        }
-
-        for (const [key, list] of indexes.byClassSlot) {
-            if (list.length > 1) errors.push(`تعارض فصل في الموعد ${key}.`);
-        }
-        for (const [key, list] of indexes.byTeacherSlot) {
-            if (list.length > 1) errors.push(`تعارض معلم في الموعد ${key}.`);
-        }
-
-        for (const [lessonId, list] of indexes.byLesson) {
-            const sorted = [...list].sort((a, b) => a.period - b.period);
-            const first = sorted[0];
-            const context = first ? subjectContext(first.stageId, first.subjectId) : null;
-            if (!context) continue;
-            if (context.subject.isArt) {
-                const artDayKey = `${first.classId}|${first.subjectId}|${first.dayId}`;
-                if (!artLessonsBySubjectDay.has(artDayKey)) artLessonsBySubjectDay.set(artDayKey, new Set());
-                artLessonsBySubjectDay.get(artDayKey).add(lessonId);
-                if (sorted.length !== 2 || sorted[1].period !== sorted[0].period + 1 || sorted[0].dayId !== sorted[1].dayId || sorted[0].classId !== sorted[1].classId || sorted[0].teacherId !== sorted[1].teacherId) {
-                    errors.push(`حصة التربية الفنية ${lessonId} ليست كتلة متتالية سليمة.`);
-                }
-            } else if (sorted.length !== 1) {
-                errors.push(`الحصة العادية ${lessonId} تحتوي على أكثر من فترة.`);
-            }
-        }
-
-        for (const [key, lessonIds] of artLessonsBySubjectDay) {
-            if (lessonIds.size > 1) errors.push(`تكررت كتلة التربية الفنية للفصل والمادة في اليوم نفسه: ${key}.`);
-        }
-
-        return { valid: errors.length === 0, errors, warnings };
-    }
-
-    function collectRequirements() {
-        const errors = [];
-        const requirements = [];
-        const teacherLoad = new Map();
-        const totalCapacity = state.days.reduce((sum, day) => sum + Number(day.periods), 0);
-
-        if (!state.teachers.length) errors.push("لا يوجد معلمون.");
-        if (!state.stages.length) errors.push("لا توجد مراحل دراسية.");
-
-        for (const stage of state.stages) {
-            for (const schoolClass of stage.classes) {
-                const classTotal = stage.subjects.reduce((sum, subject) => sum + Number(subject.quota || 0), 0);
-                if (classTotal > totalCapacity) errors.push(`نصاب ${schoolClass.name} (${classTotal}) يتجاوز السعة الأسبوعية (${totalCapacity}).`);
-
-                for (const subject of stage.subjects) {
-                    const quota = Number(subject.quota);
-                    const teacherId = subject.teacherByClass?.[schoolClass.id];
-                    if (!Number.isInteger(quota) || quota < 1) errors.push(`نصاب ${subject.name} في ${stage.name} غير صالح.`);
-                    if (!teacherById(teacherId)) errors.push(`لم يُحدد معلم صالح لمادة ${subject.name} في ${schoolClass.name}.`);
-                    if (subject.isArt && quota % 2 !== 0) errors.push(`نصاب التربية الفنية في ${stage.name} يجب أن يكون زوجيًا.`);
-                    const blocks = subject.isArt ? quota / 2 : quota;
-                    if (blocks > state.days.length) errors.push(`لا يمكن توزيع ${subject.name} في ${schoolClass.name} دون تكرار يومي.`);
-
-                    if (teacherById(teacherId) && Number.isInteger(quota) && quota > 0) {
-                        teacherLoad.set(teacherId, (teacherLoad.get(teacherId) || 0) + quota);
-                        for (let index = 0; index < blocks; index += 1) {
-                            requirements.push({
-                                requirementId: `${stage.id}|${schoolClass.id}|${subject.id}|${index}`,
-                                stageId: stage.id,
-                                classId: schoolClass.id,
-                                subjectId: subject.id,
-                                teacherId,
-                                duration: subject.isArt ? 2 : 1,
-                                isArt: subject.isArt
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        for (const [teacherId, load] of teacherLoad) {
-            if (load > totalCapacity) errors.push(`نصاب المعلم ${teacherById(teacherId)?.name || teacherId} (${load}) يتجاوز السعة الأسبوعية (${totalCapacity}).`);
-        }
-
-        return { errors, requirements };
-    }
-
-    function solveSchedule(requirements) {
-        const classSlots = new Set();
-        const teacherSlots = new Set();
-        const subjectDays = new Set();
-        const classDayLoad = new Map();
-        const teacherDayLoad = new Map();
-        const placements = [];
-        const remaining = [...requirements];
-        const startedAt = performance.now();
-        const maxNodes = 320000;
-        const maxMilliseconds = 5500;
-        let nodes = 0;
-        let limitReached = false;
-
-        const slotKey = (id, dayId, period) => `${id}|${dayId}|${period}`;
-        const subjectDayKey = requirement => `${requirement.classId}|${requirement.subjectId}|${requirement.dayId}`;
-        const loadKey = (id, dayId) => `${id}|${dayId}`;
-
-        function candidatesFor(requirement) {
-            const result = [];
-            for (const day of state.days) {
-                if (subjectDays.has(`${requirement.classId}|${requirement.subjectId}|${day.id}`)) continue;
-                const capacity = Number(day.periods);
-                for (let start = 1; start <= capacity - requirement.duration + 1; start += 1) {
-                    let available = true;
-                    for (let offset = 0; offset < requirement.duration; offset += 1) {
-                        const period = start + offset;
-                        if (classSlots.has(slotKey(requirement.classId, day.id, period)) || teacherSlots.has(slotKey(requirement.teacherId, day.id, period))) {
-                            available = false;
-                            break;
-                        }
-                    }
-                    if (available) {
-                        const classLoad = classDayLoad.get(loadKey(requirement.classId, day.id)) || 0;
-                        const teacherLoad = teacherDayLoad.get(loadKey(requirement.teacherId, day.id)) || 0;
-                        result.push({ dayId: day.id, start, score: classLoad * 7 + teacherLoad * 3 + start / 100 });
-                    }
-                }
-            }
-            return result.sort((a, b) => a.score - b.score || a.dayId.localeCompare(b.dayId) || a.start - b.start);
-        }
-
-        function place(requirement, candidate) {
-            const placed = { ...requirement, dayId: candidate.dayId, start: candidate.start };
-            placements.push(placed);
-            subjectDays.add(subjectDayKey(placed));
-            for (let offset = 0; offset < requirement.duration; offset += 1) {
-                const period = candidate.start + offset;
-                classSlots.add(slotKey(requirement.classId, candidate.dayId, period));
-                teacherSlots.add(slotKey(requirement.teacherId, candidate.dayId, period));
-            }
-            const classKey = loadKey(requirement.classId, candidate.dayId);
-            const teacherKey = loadKey(requirement.teacherId, candidate.dayId);
-            classDayLoad.set(classKey, (classDayLoad.get(classKey) || 0) + requirement.duration);
-            teacherDayLoad.set(teacherKey, (teacherDayLoad.get(teacherKey) || 0) + requirement.duration);
-        }
-
-        function unplace(requirement, candidate) {
-            placements.pop();
-            subjectDays.delete(`${requirement.classId}|${requirement.subjectId}|${candidate.dayId}`);
-            for (let offset = 0; offset < requirement.duration; offset += 1) {
-                const period = candidate.start + offset;
-                classSlots.delete(slotKey(requirement.classId, candidate.dayId, period));
-                teacherSlots.delete(slotKey(requirement.teacherId, candidate.dayId, period));
-            }
-            const classKey = loadKey(requirement.classId, candidate.dayId);
-            const teacherKey = loadKey(requirement.teacherId, candidate.dayId);
-            classDayLoad.set(classKey, (classDayLoad.get(classKey) || 0) - requirement.duration);
-            teacherDayLoad.set(teacherKey, (teacherDayLoad.get(teacherKey) || 0) - requirement.duration);
-        }
-
-        function search() {
-            nodes += 1;
-            if (nodes > maxNodes || performance.now() - startedAt > maxMilliseconds) {
-                limitReached = true;
-                return false;
-            }
-            if (!remaining.length) return true;
-
-            let bestIndex = -1;
-            let bestCandidates = null;
-            for (let index = 0; index < remaining.length; index += 1) {
-                const candidates = candidatesFor(remaining[index]);
-                if (!candidates.length) return false;
-                if (!bestCandidates || candidates.length < bestCandidates.length) {
-                    bestIndex = index;
-                    bestCandidates = candidates;
-                    if (candidates.length === 1) break;
-                }
-            }
-
-            const [requirement] = remaining.splice(bestIndex, 1);
-            for (const candidate of bestCandidates) {
-                place(requirement, candidate);
-                if (search()) return true;
-                unplace(requirement, candidate);
-                if (limitReached) break;
-            }
-            remaining.splice(bestIndex, 0, requirement);
-            return false;
-        }
-
-        const solved = search();
-        if (!solved) return { solved: false, limitReached, nodes };
-
-        const cells = [];
-        for (const placement of placements) {
-            const lessonId = newId("lesson");
-            for (let offset = 0; offset < placement.duration; offset += 1) {
-                cells.push({
-                    cellId: newId("cell"),
-                    lessonId,
-                    stageId: placement.stageId,
-                    classId: placement.classId,
-                    subjectId: placement.subjectId,
-                    teacherId: placement.teacherId,
-                    dayId: placement.dayId,
-                    period: placement.start + offset,
-                    blockPart: offset + 1,
-                    blockSize: placement.duration
-                });
-            }
-        }
-        return { solved: true, cells, nodes };
-    }
-
-    function generateSchedule(showSuccessToast = true) {
-        const { errors, requirements } = collectRequirements();
-        if (errors.length) {
-            showToast(errors[0], "error", 6000);
-            return false;
-        }
-
-        const result = solveSchedule(requirements);
-        if (!result.solved) {
-            const message = result.limitReached
-                ? "توقف البحث عند حد الأمان. خفّض الأنصبة أو أضف معلمين/حصصًا ثم أعد المحاولة."
-                : "لا يوجد توزيع يحقق جميع القيود بالبيانات الحالية.";
-            showToast(message, "error", 6500);
-            return false;
-        }
-
-        const validation = validateSchedule(result.cells, false);
-        if (!validation.valid) {
-            showToast(`رفض النظام النتيجة: ${validation.errors[0]}`, "error", 6500);
-            return false;
-        }
-
-        state.schedule = {
-            status: "success",
-            sourceRevision: state.dataRevision,
-            manualRevision: 0,
-            generatedAt: new Date().toISOString(),
-            cells: result.cells
-        };
-        state.waiting.activePreview = null;
-        renderSchedule();
-        renderScheduleStatus();
-        renderAllSelectors();
-        if (showSuccessToast) showToast(`تم توليد ${result.cells.length} حصة والتحقق منها بلا تعارضات.`, "success");
-        return true;
-    }
-
-    function renderScheduleStatus() {
-        if (state.schedule.status !== "success") {
-            elements.scheduleStatus.textContent = "لم يتم توليد الجدول بعد.";
-            elements.scheduleStatus.className = "mt-1 text-sm text-slate-500";
-            return;
-        }
-        if (scheduleIsStale()) {
-            elements.scheduleStatus.textContent = "⚠️ تغيّرت البيانات الأساسية؛ الجدول الحالي قديم ويحتاج إعادة توليد.";
-            elements.scheduleStatus.className = "mt-1 text-sm font-bold text-amber-700";
-            return;
-        }
-        const manualText = state.schedule.manualRevision ? ` — معدّل يدويًا (${state.schedule.manualRevision})` : "";
-        elements.scheduleStatus.textContent = `✅ جدول معتمد بلا تعارضات${manualText}`;
-        elements.scheduleStatus.className = "mt-1 text-sm font-bold text-emerald-700";
-    }
-
-    function renderSchedule() {
-        if (state.schedule.status !== "success" || !state.schedule.cells.length) {
-            elements.scheduleBoard.innerHTML = `
-                <div class="rounded-2xl border-2 border-dashed border-slate-300 bg-white py-20 text-center">
-                    <div class="text-5xl">📅</div>
-                    <h3 class="mt-4 text-xl font-black text-slate-800">لا يوجد جدول مولّد</h3>
-                    <p class="mt-2 text-sm text-slate-500">راجع البيانات الأساسية ثم اضغط «توليد الجدول المدرسي».</p>
-                </div>`;
-            return;
-        }
-
-        const catalog = buildCatalog();
-        const indexes = buildScheduleIndexes();
-        const stages = state.ui.scheduleStage === "all" ? state.stages : state.stages.filter(stage => stage.id === state.ui.scheduleStage);
-
-        elements.scheduleBoard.innerHTML = stages.map(stage => `
-            <section class="rounded-2xl bg-white p-4 shadow-sm">
-                <div class="mb-4 flex items-center justify-between gap-3">
-                    <div>
-                        <h3 class="text-xl font-black text-slate-900">${escapeHtml(stage.name)}</h3>
-                        <p class="text-sm text-slate-500">اسحب أي حصة داخل الفصل نفسه؛ وتتحرك التربية الفنية تلقائيًا ككتلة مزدوجة مترابطة.</p>
-                    </div>
-                    <span class="rounded-full bg-teal-50 px-3 py-1 text-xs font-black text-teal-800">${stage.classes.length} فصول</span>
-                </div>
-                <div class="space-y-5">
-                    ${stage.classes.map(schoolClass => renderClassScheduleTable(stage, schoolClass, indexes, catalog)).join("")}
-                </div>
-            </section>`).join("");
-
-        attachScheduleDragEvents();
-    }
-
-    function renderClassScheduleTable(stage, schoolClass, indexes, catalog) {
-        const maxPeriods = Math.max(...state.days.map(day => Number(day.periods)));
-        const header = Array.from({ length: maxPeriods }, (_, index) => `<th>الحصة ${index + 1}</th>`).join("");
-        const rows = state.days.map(day => {
-            const cells = Array.from({ length: maxPeriods }, (_, index) => {
-                const period = index + 1;
-                if (period > Number(day.periods)) return `<td class="schedule-slot unavailable text-center">—</td>`;
-                const list = indexes.byClassSlot.get(`${schoolClass.id}|${day.id}|${period}`) || [];
-                return `<td class="schedule-slot" data-drop-class="${escapeHtml(schoolClass.id)}" data-drop-day="${day.id}" data-drop-period="${period}">
-                    ${list.map(cell => renderLessonCard(decorateCell(cell, catalog), list.length > 1)).join("")}
-                </td>`;
-            }).join("");
-            return `<tr><td class="bg-slate-50 text-center font-black text-slate-700">${day.name}<br><span class="text-[10px] font-normal">${day.periods} حصص</span></td>${cells}</tr>`;
-        }).join("");
-
-        return `<div>
-            <h4 class="mb-2 font-black text-teal-900">${escapeHtml(schoolClass.name)}</h4>
-            <div class="schedule-wrap soft-scrollbar">
-                <table class="schedule-table">
-                    <thead><tr><th class="w-28">اليوم</th>${header}</tr></thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            </div>
-        </div>`;
-    }
-
-    function renderLessonCard(cell, conflict) {
-        const part = cell.blockSize === 2 ? `<span class="mt-1 block text-[10px] font-bold">🔗 كتلة مزدوجة ${cell.blockPart}/2</span><span class="block text-[9px] text-amber-800">اسحب أي جزء لنقل الحصتين معًا</span>` : "";
-        return `<div class="lesson-card ${cell.isArt ? "art" : ""} ${conflict ? "conflict" : ""}" draggable="true"
-            data-cell-id="${escapeHtml(cell.cellId)}"
-            data-lesson-id="${escapeHtml(cell.lessonId)}"
-            data-block-size="${Number(cell.blockSize || 1)}"
-            data-block-part="${Number(cell.blockPart || 1)}"
-            data-class-id="${escapeHtml(cell.classId)}"
-            data-day-id="${escapeHtml(cell.dayId)}"
-            data-period="${Number(cell.period)}"
-            title="${cell.blockSize === 2 ? "اسحب أي جزء لنقل حصتي التربية الفنية معًا" : "اسحب لنقل الحصة"}">
-            <div class="text-xs font-black">${escapeHtml(cell.subjectName)}</div>
-            <div class="mt-1 text-[11px] text-slate-600">${escapeHtml(cell.teacherName)}</div>
-            ${part}
-        </div>`;
-    }
-
-    function attachScheduleDragEvents() {
-        document.querySelectorAll(".lesson-card").forEach(card => {
-            card.addEventListener("dragstart", event => {
-                const payload = {
-                    type: "school-lesson",
-                    version: 1,
-                    lessonId: card.dataset.lessonId,
-                    cellId: card.dataset.cellId,
-                    sourceClassId: card.dataset.classId,
-                    sourceDayId: card.dataset.dayId,
-                    sourcePeriod: Number(card.dataset.period),
-                    blockSize: Number(card.dataset.blockSize || 1),
-                    grabbedBlockPart: Number(card.dataset.blockPart || 1)
-                };
-                activeDrag = payload;
-                lastDropPreviewKey = "";
-                event.dataTransfer.effectAllowed = "move";
-                const serialized = JSON.stringify(payload);
-                try { event.dataTransfer.setData("application/x-school-lesson+json", serialized); } catch (error) { /* text/plain remains the fallback */ }
-                event.dataTransfer.setData("text/plain", serialized);
-                document.querySelectorAll(".lesson-card").forEach(item => {
-                    if (item.dataset.lessonId === payload.lessonId) item.classList.add("drag-source");
-                });
-            });
-            card.addEventListener("dragend", clearDragVisuals);
-        });
-
-        document.querySelectorAll("[data-drop-class]").forEach(slot => {
-            slot.addEventListener("dragover", event => {
-                if (!activeDrag) return;
-                event.preventDefault();
-                const plan = updateDropPreview(slot);
-                event.dataTransfer.dropEffect = plan?.ok ? "move" : "none";
-            });
-            slot.addEventListener("drop", event => {
-                event.preventDefault();
-                const payload = readDragPayload(event.dataTransfer) || activeDrag;
-                if (!payload || payload.type !== "school-lesson" || payload.version !== 1) {
-                    clearDragVisuals();
-                    showToast("انتهت عملية السحب. حاول سحب الحصة مرة أخرى.", "error");
-                    return;
-                }
-                moveLesson(
-                    payload.lessonId,
-                    slot.dataset.dropClass,
-                    slot.dataset.dropDay,
-                    Number(slot.dataset.dropPeriod),
-                    Number(payload.grabbedBlockPart || 1)
-                );
-                clearDragVisuals();
-            });
-        });
-    }
-
-    function readDragPayload(dataTransfer) {
-        if (!dataTransfer) return null;
-        for (const type of ["application/x-school-lesson+json", "text/plain"]) {
-            try {
-                const raw = dataTransfer.getData(type);
-                if (!raw) continue;
-                const payload = JSON.parse(raw);
-                if (payload?.type === "school-lesson" && payload.version === 1 && typeof payload.lessonId === "string") return payload;
-            } catch (error) { /* Ignore external or malformed drag data. */ }
-        }
-        return null;
-    }
-
-    function clearDropIndicators() {
-        document.querySelectorAll(".schedule-slot").forEach(slot => {
-            slot.classList.remove("drop-ready", "drop-block-start", "drop-block-tail", "drop-invalid");
-        });
-    }
-
-    function clearDragVisuals() {
-        clearDropIndicators();
-        document.querySelectorAll(".lesson-card").forEach(card => card.classList.remove("drag-source"));
-        activeDrag = null;
-        lastDropPreviewKey = "";
-    }
-
-    function findDropSlot(classId, dayId, period) {
-        return [...document.querySelectorAll("[data-drop-class]")].find(slot =>
-            slot.dataset.dropClass === classId &&
-            slot.dataset.dropDay === dayId &&
-            Number(slot.dataset.dropPeriod) === Number(period)
-        ) || null;
-    }
-
-    function updateDropPreview(slot) {
-        if (!activeDrag) return null;
-        const previewKey = `${slot.dataset.dropClass}|${slot.dataset.dropDay}|${slot.dataset.dropPeriod}|${activeDrag.lessonId}|${activeDrag.grabbedBlockPart}`;
-        if (previewKey === lastDropPreviewKey && activeDrag.lastPlan) return activeDrag.lastPlan;
-        lastDropPreviewKey = previewKey;
-        clearDropIndicators();
-
-        const plan = planLessonMove({
-            lessonId: activeDrag.lessonId,
-            targetClassId: slot.dataset.dropClass,
-            targetDayId: slot.dataset.dropDay,
-            targetPeriod: Number(slot.dataset.dropPeriod),
-            grabbedBlockPart: Number(activeDrag.grabbedBlockPart || 1)
-        });
-        activeDrag.lastPlan = plan;
-
-        if (!plan.ok) {
-            slot.classList.add("drop-invalid");
-            return plan;
-        }
-
-        for (let period = plan.targetStart; period <= plan.targetEnd; period += 1) {
-            const targetSlot = findDropSlot(plan.classId, plan.dayId, period);
-            if (targetSlot) targetSlot.classList.add(period === plan.targetStart ? "drop-block-start" : "drop-block-tail");
-        }
-        return plan;
-    }
-
-    function moveFailure(code, message) {
-        return { ok: false, changed: false, code, message, proposedCells: state.schedule.cells };
-    }
-
-    function findDailySubjectDuplicate({ lessonId, classId, subjectId, dayId }) {
-        return state.schedule.cells.find(cell =>
-            cell.lessonId !== lessonId &&
-            cell.classId === classId &&
-            cell.subjectId === subjectId &&
-            cell.dayId === dayId
-        ) || null;
-    }
-
-    function planLessonMove({ lessonId, targetClassId, targetDayId, targetPeriod, grabbedBlockPart = 1 }) {
-        if (state.schedule.status !== "success" || !state.schedule.cells.length) {
-            return moveFailure("NO_SCHEDULE", "لا يوجد جدول صالح للنقل.");
-        }
-        if (scheduleIsStale()) {
-            return moveFailure("STALE_SCHEDULE", "تغيّرت الإعدادات بعد التوليد؛ أعد توليد الجدول قبل نقل الحصص.");
-        }
-
-        const sourceCells = state.schedule.cells
-            .filter(cell => cell.lessonId === lessonId)
-            .sort((a, b) => Number(a.blockPart) - Number(b.blockPart));
-        if (!sourceCells.length) return moveFailure("MISSING_LESSON", "الحصة المسحوبة لم تعد موجودة.");
-
-        const first = sourceCells[0];
-        const blockSize = Number(first.blockSize || 1);
-        const isValidSource = sourceCells.length === blockSize && sourceCells.every((cell, index) =>
-            cell.classId === first.classId &&
-            cell.stageId === first.stageId &&
-            cell.subjectId === first.subjectId &&
-            cell.teacherId === first.teacherId &&
-            cell.dayId === first.dayId &&
-            Number(cell.blockSize || 1) === blockSize &&
-            Number(cell.blockPart || 1) === index + 1 &&
-            Number(cell.period) === Number(first.period) + index
+            year: "numeric"
+          }).format(today) + " هـ";
+      } catch {
+        dateInput.value = new Intl.DateTimeFormat("ar-SA", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric"
+        }).format(today);
+      }
+
+      function normalizedValue(input, fallback) {
+        const value = input.value.replace(/\s+/g, " ").trim();
+        return value || fallback;
+      }
+
+      function syncReportMetadata() {
+        printSchoolName.textContent = normalizedValue(
+          schoolInput,
+          "........................................................"
         );
-        if (!isValidSource || ![1, 2].includes(blockSize)) {
-            return moveFailure("INVALID_SOURCE_BLOCK", "تعذر نقل الحصة لأن كتلتها غير مكتملة. أعد توليد الجدول.");
-        }
 
-        const subject = subjectContext(first.stageId, first.subjectId)?.subject;
-        if (blockSize === 2 && !subject?.isArt) {
-            return moveFailure("INVALID_DOUBLE_SUBJECT", "الكتلة المزدوجة ليست حصة تربية فنية صالحة.");
-        }
-        if (first.classId !== targetClassId) {
-            return moveFailure("CROSS_CLASS_MOVE", blockSize === 2
-                ? "يمكن نقل كتلة التربية الفنية داخل الفصل نفسه فقط حتى لا يتغير النصاب."
-                : "يمكن نقل الحصة داخل الفصل نفسه فقط حتى لا يتغير النصاب.");
-        }
+        printDay.textContent = normalizedValue(
+          dayInput,
+          "...................."
+        );
 
-        const targetDay = dayById(targetDayId);
-        if (!targetDay) return moveFailure("UNKNOWN_DAY", "اليوم المستهدف غير موجود.");
-        const grabbedPart = Number(grabbedBlockPart);
-        const droppedPeriod = Number(targetPeriod);
-        if (!Number.isInteger(grabbedPart) || grabbedPart < 1 || grabbedPart > blockSize || !Number.isInteger(droppedPeriod)) {
-            return moveFailure("INVALID_DRAG_OFFSET", "بيانات السحب غير صالحة. حاول مرة أخرى.");
-        }
+        printDate.textContent = normalizedValue(
+          dateInput,
+          "...................."
+        );
 
-        const targetStart = droppedPeriod - (grabbedPart - 1);
-        const targetEnd = targetStart + blockSize - 1;
-        if (targetStart < 1) {
-            return moveFailure("OUT_OF_DAY_START", "لا يمكن وضع الجزء الثاني هنا؛ ستبدأ الكتلة قبل الحصة الأولى.");
-        }
-        if (targetEnd > Number(targetDay.periods)) {
-            return moveFailure("OUT_OF_DAY_CAPACITY", blockSize === 2
-                ? `تحتاج التربية الفنية حصتين متتاليتين، ولا توجد حصة تالية بعد الحصة ${targetDay.periods} يوم ${targetDay.name}.`
-                : `الحصة المستهدفة تتجاوز سعة يوم ${targetDay.name}.`);
-        }
+        document.title =
+          "تقرير حصص الانتظار اليومي - " +
+          normalizedValue(schoolInput, "المدرسة");
+      }
 
-        const unchanged = sourceCells.every((cell, index) => cell.dayId === targetDayId && Number(cell.period) === targetStart + index);
-        if (unchanged) {
-            return { ok: true, changed: false, code: "NO_CHANGE", message: "الحصة موجودة في هذا الموضع.", proposedCells: state.schedule.cells, classId: first.classId, dayId: targetDayId, targetStart, targetEnd, blockSize };
-        }
+      function renumberRows() {
+        [...rowsContainer.rows].forEach((row, index) => {
+          row.querySelector(".row-number").textContent = String(index + 1);
+        });
+      }
 
-        const remainingCells = state.schedule.cells.filter(cell => cell.lessonId !== lessonId);
-        if (subject && !subject.isArt && findDailySubjectDuplicate({
-            lessonId,
-            classId: first.classId,
-            subjectId: first.subjectId,
-            dayId: targetDayId
-        })) {
-            return moveFailure("SUBJECT_DAY_DUPLICATE", "يوجد حصة لنفس المادة في نفس الفصل في نفس اليوم");
-        }
+      function addRow() {
+        const fragment = rowTemplate.content.cloneNode(true);
+        const row = fragment.querySelector("tr");
+        const removeButton = fragment.querySelector(".remove-row");
 
-        const targetPeriods = new Set(Array.from({ length: blockSize }, (_, index) => targetStart + index));
-        const classConflict = remainingCells.find(cell => cell.classId === first.classId && cell.dayId === targetDayId && targetPeriods.has(Number(cell.period)));
-        if (classConflict) {
-            return moveFailure("CLASS_SLOT_CONFLICT", `لا يمكن النقل: الفصل لديه حصة أخرى في الحصة ${classConflict.period} من يوم ${targetDay.name}.`);
-        }
-        const teacherConflict = remainingCells.find(cell => cell.teacherId === first.teacherId && cell.dayId === targetDayId && targetPeriods.has(Number(cell.period)));
-        if (teacherConflict) {
-            return moveFailure("TEACHER_SLOT_CONFLICT", `لا يمكن النقل: ${teacherById(first.teacherId)?.name || "المعلم"} لديه حصة أخرى في الحصة ${teacherConflict.period} من يوم ${targetDay.name}.`);
-        }
-
-        const movedById = new Map(sourceCells.map((cell, index) => [cell.cellId, {
-            ...cell,
-            dayId: targetDayId,
-            period: targetStart + index,
-            blockPart: index + 1,
-            blockSize
-        }]));
-        const proposedCells = state.schedule.cells.map(cell => movedById.get(cell.cellId) || cell);
-        const validation = validateSchedule(proposedCells, false);
-        if (!validation.valid) {
-            return moveFailure("POST_MOVE_VALIDATION_FAILED", validation.errors[0] || "فشل التحقق من الجدول بعد النقل.");
-        }
-
-        return {
-            ok: true,
-            changed: true,
-            code: "READY",
-            message: "يمكن اعتماد النقل.",
-            proposedCells,
-            classId: first.classId,
-            dayId: targetDayId,
-            targetStart,
-            targetEnd,
-            blockSize
-        };
-    }
-
-    function moveLesson(lessonId, targetClassId, targetDayId, targetPeriod, grabbedBlockPart = 1) {
-        const plan = planLessonMove({ lessonId, targetClassId, targetDayId, targetPeriod, grabbedBlockPart });
-        if (!plan.ok) {
-            showToast(plan.message, "error", 5500);
-            return false;
-        }
-        if (!plan.changed) return true;
-
-        state.schedule.cells = plan.proposedCells;
-        state.schedule.manualRevision += 1;
-        state.waiting.activePreview = null;
-        renderSchedule();
-        renderScheduleStatus();
-        if (plan.blockSize === 2) {
-            showToast(`تم نقل كتلة التربية الفنية كاملة إلى ${dayById(plan.dayId)?.name}، الحصتين ${plan.targetStart} و${plan.targetEnd}.`);
-        } else {
-            showToast(`تم نقل الحصة إلى ${dayById(plan.dayId)?.name}، الحصة ${plan.targetStart}، بعد التحقق من عدم وجود تعارض.`);
-        }
-        return true;
-    }
-
-    function weeklyBaseCount(teacherId) {
-        return state.schedule.cells.filter(cell => cell.teacherId === teacherId).length;
-    }
-
-    function effectiveWaitingRecords() {
-        return state.waiting.archive.filter(record => record.status === "assigned");
-    }
-
-    function effectiveWaitingCount(teacherId, cutoffDate = "9999-12-31") {
-        return effectiveWaitingRecords().filter(record => record.substituteTeacherId === teacherId && record.date <= cutoffDate).length;
-    }
-
-    function seedMockArchive() {
-        const today = riyadhDate();
-        const records = [
-            ["MOCK-WAIT-001", -3, "sun", 2, "p-1a", "الصف الأول / أ", "الرياضيات", "t-ahmed", "أحمد سالم", "t-reem", "ريم صالح", 4],
-            ["MOCK-WAIT-002", -2, "mon", 4, "m-1a", "الأول المتوسط / أ", "العلوم", "t-noura", "نورة محمد", "t-yousef", "يوسف عمر", 3],
-            ["MOCK-WAIT-003", -1, "tue", 1, "p-1b", "الصف الأول / ب", "اللغة العربية", "t-khaled", "خالد علي", "t-reem", "ريم صالح", 4]
-        ];
-        return records.map(([recordId, offset, dayId, period, classId, className, subjectName, absentId, absentName, substituteId, substituteName, base]) => ({
-            recordId,
-            batchId: "MOCK-BATCH",
-            assignmentKey: `${offsetDate(today, offset)}|mock-cell-${recordId}`,
-            date: offsetDate(today, offset),
-            dayId,
-            period,
-            sourceCellId: `mock-cell-${recordId}`,
-            sourceLessonId: `mock-lesson-${recordId}`,
-            classId,
-            classNameSnapshot: className,
-            subjectId: "mock-subject",
-            subjectNameSnapshot: subjectName,
-            absentTeacherId: absentId,
-            absentTeacherNameSnapshot: absentName,
-            substituteTeacherId: substituteId,
-            substituteTeacherNameSnapshot: substituteName,
-            status: "assigned",
-            weeklyBaseCountSnapshot: base,
-            waitingCountBefore: 0,
-            waitingCountAfter: 1,
-            cumulativeBefore: base,
-            cumulativeAfter: base + 1,
-            source: "mock",
-            createdAt: new Date().toISOString(),
-            note: "بيانات تجريبية"
-        }));
-    }
-
-    function isValidArchiveRecord(record) {
-        return record && typeof record === "object" && typeof record.recordId === "string" && typeof record.assignmentKey === "string" && /^\d{4}-\d{2}-\d{2}$/.test(record.date || "") && Number.isInteger(Number(record.period));
-    }
-
-    function loadWaitingArchive() {
-        try {
-            const saved = localStorage.getItem("school_waiting_archive_v1");
-            if (!saved) {
-                const seeded = seedMockArchive();
-                localStorage.setItem("school_waiting_archive_v1", JSON.stringify(seeded));
-                return seeded;
-            }
-            const parsed = JSON.parse(saved);
-            if (!Array.isArray(parsed) || !parsed.every(isValidArchiveRecord)) throw new Error("Invalid archive schema");
-            return parsed;
-        } catch (error) {
-            archiveLoadWarning = "تعذر قراءة أرشيف الانتظار المحلي؛ تم تحميل بيانات تجريبية آمنة دون حذف النسخة الموجودة.";
-            return seedMockArchive();
-        }
-    }
-
-    function saveWaitingArchive() {
-        try {
-            localStorage.setItem("school_waiting_archive_v1", JSON.stringify(state.waiting.archive));
-        } catch (error) {
-            showToast("تعذر حفظ الأرشيف محليًا في هذا المتصفح.", "warning");
-        }
-    }
-
-    function buildWaitingPreview() {
-        if (state.schedule.status !== "success") {
-            showToast("ولّد الجدول الأساسي أولًا حتى يمكن اكتشاف حصص الغائب.", "error");
-            return null;
-        }
-        if (scheduleIsStale()) {
-            showToast("أعد توليد الجدول بعد تغييرات الإعدادات قبل توزيع الانتظار.", "error");
-            return null;
-        }
-
-        const date = elements.absenceDate.value;
-        const dayId = elements.absenceDay.value;
-        const absentTeacherId = elements.absentTeacher.value;
-        const absentTeacher = teacherById(absentTeacherId);
-        if (!date || !dayId || !absentTeacher) {
-            showToast("اختر التاريخ واليوم والمعلم الغائب.", "error");
-            return null;
-        }
-
-        const catalog = buildCatalog();
-        const absentCells = state.schedule.cells
-            .filter(cell => cell.teacherId === absentTeacherId && cell.dayId === dayId)
-            .sort((a, b) => a.period - b.period || a.classId.localeCompare(b.classId));
-        const batchId = newId("absence");
-        const draftAssignedBySlot = new Set();
-        const draftWaitingAdds = new Map();
-        const activeByKey = new Map(state.waiting.archive.filter(record => ["assigned", "uncovered"].includes(record.status)).map(record => [record.assignmentKey, record]));
-        const rows = [];
-
-        for (const cell of absentCells) {
-            const decorated = decorateCell(cell, catalog);
-            const assignmentKey = `${date}|${cell.classId}|${dayId}|${cell.period}`;
-            const existing = activeByKey.get(assignmentKey);
-            if (existing) {
-                rows.push({ ...existing, existing: true });
-                continue;
-            }
-
-            const candidates = state.teachers
-                .filter(teacher => teacher.id !== absentTeacherId)
-                .filter(teacher => !state.schedule.cells.some(item => item.teacherId === teacher.id && item.dayId === dayId && item.period === cell.period))
-                .filter(teacher => !effectiveWaitingRecords().some(record => record.date === date && record.dayId === dayId && Number(record.period) === cell.period && record.substituteTeacherId === teacher.id))
-                .filter(teacher => !draftAssignedBySlot.has(`${teacher.id}|${cell.period}`))
-                .map(teacher => {
-                    const base = weeklyBaseCount(teacher.id);
-                    const historical = effectiveWaitingCount(teacher.id);
-                    const draftAdds = draftWaitingAdds.get(teacher.id) || 0;
-                    return { teacher, base, historical, draftAdds, total: base + historical + draftAdds };
-                })
-                .sort((a, b) => a.total - b.total || a.historical - b.historical || a.base - b.base || a.teacher.name.localeCompare(b.teacher.name, "ar") || a.teacher.id.localeCompare(b.teacher.id));
-
-            const selected = candidates[0] || null;
-            if (selected) {
-                draftAssignedBySlot.add(`${selected.teacher.id}|${cell.period}`);
-                draftWaitingAdds.set(selected.teacher.id, (draftWaitingAdds.get(selected.teacher.id) || 0) + 1);
-            }
-
-            rows.push({
-                recordId: newId("wait-draft"),
-                batchId,
-                assignmentKey,
-                date,
-                dayId,
-                period: cell.period,
-                sourceCellId: cell.cellId,
-                sourceLessonId: cell.lessonId,
-                classId: cell.classId,
-                classNameSnapshot: decorated.className,
-                subjectId: cell.subjectId,
-                subjectNameSnapshot: decorated.subjectName,
-                absentTeacherId,
-                absentTeacherNameSnapshot: absentTeacher.name,
-                substituteTeacherId: selected?.teacher.id || null,
-                substituteTeacherNameSnapshot: selected?.teacher.name || "غير مغطاة",
-                status: selected ? "assigned" : "uncovered",
-                weeklyBaseCountSnapshot: selected?.base || 0,
-                waitingCountBefore: selected ? selected.historical + selected.draftAdds : 0,
-                waitingCountAfter: selected ? selected.historical + selected.draftAdds + 1 : 0,
-                cumulativeBefore: selected?.total || 0,
-                cumulativeAfter: selected ? selected.total + 1 : 0,
-                source: "live",
-                createdAt: new Date().toISOString(),
-                note: "",
-                candidates: candidates.slice(0, 5).map(candidate => ({ id: candidate.teacher.id, name: candidate.teacher.name, total: candidate.total }))
+        removeButton.addEventListener("click", () => {
+          if (rowsContainer.rows.length <= 1) {
+            row.querySelectorAll("input").forEach((input) => {
+              input.value = "";
             });
-        }
-
-        return {
-            batchId,
-            date,
-            dayId,
-            absentTeacherId,
-            sourceRevision: state.dataRevision,
-            rows,
-            committed: false
-        };
-    }
-
-    function previewAbsence() {
-        const preview = buildWaitingPreview();
-        if (!preview) return;
-        state.waiting.activePreview = preview;
-        renderWaitingPreview();
-        if (!preview.rows.length) showToast("لا توجد حصص أساسية لهذا المعلم في اليوم المحدد.", "info");
-    }
-
-    function renderWaitingPreview() {
-        const preview = state.waiting.activePreview;
-        if (!preview) {
-            elements.waitingSummary.innerHTML = "";
-            elements.vacanciesBoard.innerHTML = `<div class="py-14 text-center text-slate-500">اختر معلماً غائباً لعرض حصصه الشاغرة ومقترحات التغطية.</div>`;
-            elements.commitWaiting.classList.add("hidden");
             return;
-        }
+          }
 
-        const covered = preview.rows.filter(row => row.status === "assigned").length;
-        const uncovered = preview.rows.filter(row => row.status === "uncovered").length;
-        elements.waitingSummary.innerHTML = [
-            ["الحصص الشاغرة", preview.rows.length, "bg-slate-900"],
-            ["مغطاة", covered, "bg-emerald-700"],
-            ["دون بديل", uncovered, "bg-red-700"]
-        ].map(([label, value, color]) => `<div class="rounded-2xl ${color} p-4 text-white shadow"><div class="text-2xl font-black">${value}</div><div class="text-sm">${label}</div></div>`).join("");
-
-        if (!preview.rows.length) {
-            elements.vacanciesBoard.innerHTML = `<div class="py-14 text-center text-slate-500">لا توجد حصص شاغرة للمعلم في هذا اليوم.</div>`;
-            elements.commitWaiting.classList.add("hidden");
-            return;
-        }
-
-        elements.vacanciesBoard.innerHTML = `
-            <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h3 class="text-lg font-black">نتيجة التوزيع المقترح</h3>
-                    <p class="text-sm text-slate-500">${escapeHtml(dayById(preview.dayId)?.name)} — ${escapeHtml(formatDate(preview.date))}</p>
-                </div>
-                <span class="rounded-full ${preview.committed ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"} px-3 py-1 text-xs font-black">${preview.committed ? "محفوظ في الأرشيف" : "معاينة غير محفوظة"}</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full min-w-[850px] border-collapse text-sm">
-                    <thead><tr class="bg-slate-100"><th class="border p-2">الحصة</th><th class="border p-2">الفصل</th><th class="border p-2">المادة</th><th class="border p-2">البديل المقترح</th><th class="border p-2">المجموع قبل</th><th class="border p-2">بعد الإسناد</th><th class="border p-2">أفضل المرشحين</th></tr></thead>
-                    <tbody>${preview.rows.map(row => `<tr>
-                        <td class="border p-2 text-center font-black">${row.period}</td>
-                        <td class="border p-2">${escapeHtml(row.classNameSnapshot)}</td>
-                        <td class="border p-2">${escapeHtml(row.subjectNameSnapshot)}</td>
-                        <td class="border p-2 font-black ${row.status === "assigned" ? "text-emerald-700" : "text-red-700"}">${escapeHtml(row.substituteTeacherNameSnapshot)}${row.existing ? " (معتمد سابقًا)" : ""}</td>
-                        <td class="border p-2 text-center">${row.cumulativeBefore ?? "—"}</td>
-                        <td class="border p-2 text-center font-black">${row.status === "assigned" ? row.cumulativeAfter : "—"}</td>
-                        <td class="border p-2 text-xs text-slate-600">${row.candidates?.length ? row.candidates.map(item => `${escapeHtml(item.name)} (${item.total})`).join("، ") : "—"}</td>
-                    </tr>`).join("")}</tbody>
-                </table>
-            </div>`;
-
-        elements.commitWaiting.classList.toggle("hidden", preview.committed || preview.rows.every(row => row.existing));
-    }
-
-    function commitWaitingPreview() {
-        const preview = state.waiting.activePreview;
-        if (!preview || preview.committed) return;
-        if (preview.sourceRevision !== state.dataRevision || scheduleIsStale()) {
-            showToast("تغيّرت البيانات منذ إنشاء المعاينة؛ أعد التحليل قبل الاعتماد.", "error");
-            return;
-        }
-
-        const existingKeys = new Set(state.waiting.archive.filter(record => ["assigned", "uncovered"].includes(record.status)).map(record => record.assignmentKey));
-        const additions = preview.rows
-            .filter(row => !row.existing && !existingKeys.has(row.assignmentKey))
-            .map(row => {
-                const copy = structuredCloneSafe(row);
-                delete copy.candidates;
-                delete copy.existing;
-                copy.recordId = newId("wait");
-                copy.createdAt = new Date().toISOString();
-                return copy;
-            });
-
-        state.waiting.archive = [...state.waiting.archive, ...additions];
-        saveWaitingArchive();
-        preview.committed = true;
-        renderWaitingPreview();
-        showToast(`تم اعتماد وحفظ ${additions.length} سجل انتظار دون تكرار.`);
-    }
-
-    function renderSettings() {
-        elements.schoolName.value = state.school.name;
-        elements.academicYear.value = state.school.academicYear;
-        elements.principalName.value = state.school.principal;
-        renderDayCapacities();
-        renderTeachersTable();
-        renderStageEditor();
-    }
-
-    function renderDayCapacities() {
-        elements.dayCapacityInputs.innerHTML = state.days.map(day => `
-            <label class="text-xs font-bold text-slate-700">${day.name}
-                <input data-day-capacity="${day.id}" type="number" min="1" max="12" value="${day.periods}" class="mt-1 w-full rounded-xl border border-slate-300 px-2 py-2 text-center">
-            </label>`).join("");
-    }
-
-    function renderTeachersTable() {
-        elements.teachersTable.innerHTML = `
-            <table class="w-full min-w-[720px] border-collapse text-sm">
-                <thead><tr class="bg-slate-100"><th class="border p-2">اسم المعلم</th><th class="border p-2">رقم الهوية</th><th class="border p-2">رقم الجوال</th><th class="border p-2">الإجراءات</th></tr></thead>
-                <tbody>${state.teachers.map(teacher => `<tr>
-                    <td class="border p-2 font-bold">${escapeHtml(teacher.name)}</td>
-                    <td class="border p-2 text-center" dir="ltr">${escapeHtml(teacher.identity)}</td>
-                    <td class="border p-2 text-center" dir="ltr">${escapeHtml(teacher.mobile)}</td>
-                    <td class="border p-2 text-center">
-                        <button data-edit-teacher="${escapeHtml(teacher.id)}" class="rounded-lg bg-amber-100 px-3 py-1 font-bold text-amber-900">تعديل</button>
-                        <button data-delete-teacher="${escapeHtml(teacher.id)}" class="mr-1 rounded-lg bg-red-100 px-3 py-1 font-bold text-red-800">حذف</button>
-                    </td>
-                </tr>`).join("")}</tbody>
-            </table>`;
-    }
-
-    function renderStageEditor() {
-        const stage = stageById(state.ui.settingsStageId) || state.stages[0];
-        if (!stage) return;
-        state.ui.settingsStageId = stage.id;
-
-        elements.classesList.innerHTML = stage.classes.length
-            ? stage.classes.map(schoolClass => `<div class="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2">
-                <span class="font-bold">${escapeHtml(schoolClass.name)}</span>
-                <span class="shrink-0">
-                    <button data-edit-class="${escapeHtml(schoolClass.id)}" class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-bold text-amber-900">تعديل</button>
-                    <button data-delete-class="${escapeHtml(schoolClass.id)}" class="rounded-lg bg-red-100 px-2 py-1 text-xs font-bold text-red-800">حذف</button>
-                </span>
-            </div>`).join("")
-            : `<div class="rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-500">لا توجد فصول.</div>`;
-
-        elements.subjectsList.innerHTML = stage.subjects.length
-            ? stage.subjects.map(subject => `<article class="rounded-xl bg-slate-50 p-3" data-subject-card="${escapeHtml(subject.id)}">
-                <div class="grid gap-2 sm:grid-cols-[1fr_80px_100px_auto]">
-                    <input data-subject-name="${escapeHtml(subject.id)}" value="${escapeHtml(subject.name)}" class="rounded-lg border border-slate-300 px-2 py-1.5">
-                    <input data-subject-quota="${escapeHtml(subject.id)}" type="number" min="1" max="10" value="${subject.quota}" class="rounded-lg border border-slate-300 px-2 py-1.5 text-center">
-                    <label class="flex items-center gap-2 rounded-lg border border-slate-300 px-2"><input data-subject-art="${escapeHtml(subject.id)}" type="checkbox" ${subject.isArt ? "checked" : ""}> فنية</label>
-                    <button data-delete-subject="${escapeHtml(subject.id)}" class="rounded-lg bg-red-100 px-3 py-1.5 text-xs font-black text-red-800">حذف</button>
-                </div>
-                <div class="mt-3 grid gap-2 sm:grid-cols-2">${stage.classes.map(schoolClass => `
-                    <label class="text-xs font-bold text-slate-600">${escapeHtml(schoolClass.name)}
-                        <select data-subject-teacher="${escapeHtml(subject.id)}" data-class-id="${escapeHtml(schoolClass.id)}" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5">
-                            ${teacherOptions(subject.teacherByClass?.[schoolClass.id], true)}
-                        </select>
-                    </label>`).join("")}</div>
-            </article>`).join("")
-            : `<div class="rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-500">لا توجد مواد.</div>`;
-
-        renderAllSelectors();
-    }
-
-    function teacherOptions(selectedId = "", includePrompt = false) {
-        const prompt = includePrompt ? `<option value="">— اختر المعلم —</option>` : "";
-        return prompt + [...state.teachers]
-            .sort((a, b) => a.name.localeCompare(b.name, "ar"))
-            .map(teacher => `<option value="${escapeHtml(teacher.id)}" ${teacher.id === selectedId ? "selected" : ""}>${escapeHtml(teacher.name)}</option>`)
-            .join("");
-    }
-
-    function renderAllSelectors() {
-        const stageOptions = state.stages.map(stage => `<option value="${escapeHtml(stage.id)}">${escapeHtml(stage.name)}</option>`).join("");
-        const selectedSettings = stageById(state.ui.settingsStageId)?.id || state.stages[0]?.id || "";
-
-        elements.scheduleStageFilter.innerHTML = `<option value="all">كل المراحل</option>${stageOptions}`;
-        elements.scheduleStageFilter.value = state.ui.scheduleStage;
-        elements.settingsStageSelect.innerHTML = stageOptions;
-        elements.settingsStageSelect.value = selectedSettings;
-        elements.reportStageSelect.innerHTML = stageOptions;
-
-        const targetOptions = state.stages
-            .filter(stage => stage.id !== selectedSettings)
-            .map(stage => `<option value="${escapeHtml(stage.id)}">${escapeHtml(stage.name)}</option>`).join("");
-        elements.copyClassesTarget.innerHTML = targetOptions || `<option value="">لا توجد مرحلة أخرى</option>`;
-        elements.copySubjectsTarget.innerHTML = targetOptions || `<option value="">لا توجد مرحلة أخرى</option>`;
-
-        const sortedTeachers = [...state.teachers].sort((a, b) => a.name.localeCompare(b.name, "ar"));
-        elements.absentTeacher.innerHTML = `<option value="">— اختر المعلم الغائب —</option>${teacherOptions("", false)}`;
-        elements.reportTeacherSelect.innerHTML = teacherOptions("", false);
-        elements.teacherNamesList.innerHTML = sortedTeachers.map(teacher => `<option value="${escapeHtml(teacher.name)}"></option>`).join("");
-
-        elements.reportClassSelect.innerHTML = allClasses()
-            .sort((a, b) => a.stageName.localeCompare(b.stageName, "ar") || a.name.localeCompare(b.name, "ar"))
-            .map(schoolClass => `<option value="${escapeHtml(schoolClass.id)}">${escapeHtml(schoolClass.stageName)} — ${escapeHtml(schoolClass.name)}</option>`).join("");
-
-        elements.absenceDay.innerHTML = state.days.map(day => `<option value="${day.id}">${day.name}</option>`).join("");
-    }
-
-    async function importTeachersFromExcel(file) {
-        if (!file) return;
-        if (typeof XLSX === "undefined") {
-            showToast("تعذر تحميل مكتبة SheetJS. تحقق من اتصال الإنترنت ثم أعد المحاولة.", "error");
-            return;
-        }
-
-        try {
-            const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
-            if (!rows.length) throw new Error("الملف فارغ.");
-
-            const headers = rows[0].map((value, index) => index === 0 ? String(value).replace(/^\uFEFF/, "") : String(value));
-            const required = ["اسم المعلم", "رقم الهوية", "رقم الجوال"];
-            const indexes = Object.fromEntries(required.map(header => [header, headers.indexOf(header)]));
-            const missing = required.filter(header => indexes[header] === -1);
-            if (missing.length) throw new Error(`العناوين مفقودة أو غير مطابقة حرفيًا: ${missing.join("، ")}`);
-
-            const imported = [];
-            const identities = new Set();
-            for (let rowIndex = 1; rowIndex < rows.length; rowIndex += 1) {
-                const row = rows[rowIndex];
-                if (row.every(value => String(value).trim() === "")) continue;
-                const name = String(row[indexes["اسم المعلم"]] ?? "").trim();
-                const identity = normalizeDigits(row[indexes["رقم الهوية"]]).replace(/\s/g, "");
-                const mobile = normalizeDigits(row[indexes["رقم الجوال"]]).replace(/[()\s-]/g, "");
-                if (!name || !identity || !mobile) throw new Error(`الصف ${rowIndex + 1}: يجب تعبئة الأعمدة الثلاثة.`);
-                if (!/^\d{6,20}$/.test(identity)) throw new Error(`الصف ${rowIndex + 1}: رقم الهوية غير صالح.`);
-                if (!/^\+?\d{8,15}$/.test(mobile)) throw new Error(`الصف ${rowIndex + 1}: رقم الجوال غير صالح.`);
-                if (identities.has(identity)) throw new Error(`الصف ${rowIndex + 1}: رقم الهوية مكرر داخل الملف.`);
-                identities.add(identity);
-                imported.push({ name, identity, mobile });
-            }
-            if (!imported.length) throw new Error("لا توجد صفوف معلمين قابلة للاستيراد.");
-
-            const nextTeachers = structuredCloneSafe(state.teachers);
-            for (const item of imported) {
-                const existing = nextTeachers.find(teacher => teacher.identity === item.identity);
-                if (existing) Object.assign(existing, item);
-                else nextTeachers.push({ id: newId("teacher"), ...item });
-            }
-            state.teachers = nextTeachers;
-            renderTeachersTable();
-            markStructuralChange(`تم استيراد/تحديث ${imported.length} معلماً بنجاح.`);
-        } catch (error) {
-            showToast(error.message || "تعذر قراءة ملف Excel.", "error", 6500);
-        } finally {
-            elements.teacherExcelFile.value = "";
-        }
-    }
-
-    function saveTeacherFromForm(event) {
-        event.preventDefault();
-        const id = elements.teacherEditId.value;
-        const name = elements.teacherName.value.trim();
-        const identity = normalizeDigits(elements.teacherIdentity.value).replace(/\s/g, "");
-        const mobile = normalizeDigits(elements.teacherMobile.value).replace(/[()\s-]/g, "");
-        if (!name || !/^\d{6,20}$/.test(identity) || !/^\+?\d{8,15}$/.test(mobile)) {
-            showToast("تحقق من الاسم ورقم الهوية ورقم الجوال.", "error");
-            return;
-        }
-        const duplicate = state.teachers.find(teacher => teacher.identity === identity && teacher.id !== id);
-        if (duplicate) {
-            showToast("رقم الهوية مستخدم لمعلم آخر.", "error");
-            return;
-        }
-        if (id) Object.assign(teacherById(id), { name, identity, mobile });
-        else state.teachers.push({ id: newId("teacher"), name, identity, mobile });
-        elements.teacherForm.reset();
-        elements.teacherEditId.value = "";
-        renderTeachersTable();
-        markStructuralChange(id ? "تم تعديل المعلم." : "تمت إضافة المعلم.");
-    }
-
-    function teacherIsAssigned(teacherId) {
-        return state.stages.some(stage => stage.subjects.some(subject => Object.values(subject.teacherByClass || {}).includes(teacherId)));
-    }
-
-    function addClass() {
-        const stage = stageById(state.ui.settingsStageId);
-        const name = elements.newClassName.value.trim();
-        if (!stage || !name) return showToast("اكتب اسم الفصل.", "error");
-        if (stage.classes.some(item => normalizeArabicSearch(item.name) === normalizeArabicSearch(name))) return showToast("اسم الفصل موجود في هذه المرحلة.", "error");
-        const schoolClass = { id: newId("class"), name };
-        stage.classes.push(schoolClass);
-        for (const subject of stage.subjects) subject.teacherByClass[schoolClass.id] = "";
-        elements.newClassName.value = "";
-        renderStageEditor();
-        markStructuralChange("تمت إضافة الفصل.");
-    }
-
-    function addSubject() {
-        const stage = stageById(state.ui.settingsStageId);
-        const name = elements.newSubjectName.value.trim();
-        const quota = Number(elements.newSubjectQuota.value);
-        const isArt = elements.newSubjectArt.checked;
-        if (!stage || !name || !Number.isInteger(quota) || quota < 1 || quota > 10) return showToast("تحقق من اسم المادة والنصاب.", "error");
-        if (isArt && quota % 2 !== 0) return showToast("نصاب التربية الفنية يجب أن يكون عددًا زوجيًا.", "error");
-        if (stage.subjects.some(item => normalizeArabicSearch(item.name) === normalizeArabicSearch(name))) return showToast("المادة موجودة في هذه المرحلة.", "error");
-        stage.subjects.push({
-            id: newId("subject"),
-            name,
-            quota,
-            isArt,
-            teacherByClass: Object.fromEntries(stage.classes.map(item => [item.id, ""]))
-        });
-        elements.newSubjectName.value = "";
-        elements.newSubjectQuota.value = "2";
-        elements.newSubjectArt.checked = false;
-        renderStageEditor();
-        markStructuralChange("تمت إضافة المادة.");
-    }
-
-    function copyClasses() {
-        const source = stageById(state.ui.settingsStageId);
-        const target = stageById(elements.copyClassesTarget.value);
-        if (!source || !target) return showToast("اختر مرحلة مستهدفة.", "error");
-        for (const sourceClass of source.classes) {
-            let name = sourceClass.name;
-            let serial = 2;
-            while (target.classes.some(item => normalizeArabicSearch(item.name) === normalizeArabicSearch(name))) name = `${sourceClass.name} - نسخة ${serial++}`;
-            const newClass = { id: newId("class"), name };
-            target.classes.push(newClass);
-            for (const subject of target.subjects) subject.teacherByClass[newClass.id] = "";
-        }
-        renderStageEditor();
-        markStructuralChange(`تم نسخ ${source.classes.length} فصول إلى ${target.name}.`);
-    }
-
-    function copySubjects() {
-        const source = stageById(state.ui.settingsStageId);
-        const target = stageById(elements.copySubjectsTarget.value);
-        if (!source || !target) return showToast("اختر مرحلة مستهدفة.", "error");
-        for (const sourceSubject of source.subjects) {
-            const existing = target.subjects.find(item => normalizeArabicSearch(item.name) === normalizeArabicSearch(sourceSubject.name));
-            if (existing) {
-                existing.quota = sourceSubject.quota;
-                existing.isArt = sourceSubject.isArt;
-            } else {
-                target.subjects.push({
-                    id: newId("subject"),
-                    name: sourceSubject.name,
-                    quota: sourceSubject.quota,
-                    isArt: sourceSubject.isArt,
-                    teacherByClass: Object.fromEntries(target.classes.map(item => [item.id, ""]))
-                });
-            }
-        }
-        renderStageEditor();
-        markStructuralChange(`تم نسخ ${source.subjects.length} مواد بأنصبتها إلى ${target.name}.`);
-    }
-
-    function reportHeader(title, subtitle = "") {
-        const generated = new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Riyadh" }).format(new Date());
-        return `<header class="print-head">
-            <div class="print-head-side"><strong>${escapeHtml(state.school.name)}</strong><br>العام الدراسي: ${escapeHtml(state.school.academicYear)}<br>${state.school.principal ? `مدير/ة المدرسة: ${escapeHtml(state.school.principal)}` : ""}</div>
-            <div class="print-title"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(subtitle)}</p></div>
-            <div class="print-head-side">تاريخ الإصدار<br>${escapeHtml(generated)}</div>
-        </header>`;
-    }
-
-    function reportPage(title, subtitle, content, warning = "") {
-        return `<section class="print-page">${reportHeader(title, subtitle)}${warning ? `<div class="print-warning">⚠️ ${escapeHtml(warning)}</div>` : ""}${content}</section>`;
-    }
-
-    function timetableTable(kind, entityId, indexes, catalog) {
-        const maxPeriods = Math.max(...state.days.map(day => Number(day.periods)));
-        const header = state.days.map(day => `<th>${day.name}<br><small>${day.periods} حصص</small></th>`).join("");
-        const rows = Array.from({ length: maxPeriods }, (_, index) => {
-            const period = index + 1;
-            const dayCells = state.days.map(day => {
-                if (period > Number(day.periods)) return `<td class="disabled-cell">—</td>`;
-                const key = kind === "class" ? `${entityId}|${day.id}|${period}` : `${entityId}|${day.id}|${period}`;
-                const list = (kind === "class" ? indexes.byClassSlot : indexes.byTeacherSlot).get(key) || [];
-                if (!list.length) return `<td>—</td>`;
-                const content = list.map(raw => {
-                    const cell = decorateCell(raw, catalog);
-                    const main = kind === "class" ? cell.subjectName : `${cell.className} — ${cell.stageName}`;
-                    const secondary = kind === "class" ? cell.teacherName : cell.subjectName;
-                    const block = cell.blockSize === 2 ? `<br><small>فنية متتابعة ${cell.blockPart}/2</small>` : "";
-                    return `<strong>${escapeHtml(main)}</strong><br><small>${escapeHtml(secondary)}</small>${block}`;
-                }).join("<hr>");
-                return `<td class="${list.length > 1 ? "conflict-cell" : ""}">${content}</td>`;
-            }).join("");
-            return `<tr><th>الحصة ${period}</th>${dayCells}</tr>`;
-        }).join("");
-        return `<table class="print-table"><thead><tr><th style="width:10%">الحصة</th>${header}</tr></thead><tbody>${rows}</tbody></table>`;
-    }
-
-    function teacherPrintColor(teacherId) {
-        const value = String(teacherId || "missing-teacher");
-        let hash = 2166136261;
-        for (let index = 0; index < value.length; index += 1) {
-            hash ^= value.charCodeAt(index);
-            hash = Math.imul(hash, 16777619);
-        }
-        const hue = (hash >>> 0) % 360;
-        return {
-            background: `hsl(${hue} 78% 91%)`,
-            border: `hsl(${hue} 58% 43%)`,
-            text: `hsl(${hue} 58% 20%)`
-        };
-    }
-
-    function coloredGeneralGridPage(mode, indexes, catalog, warning = "") {
-        if (!['classes', 'subjects'].includes(mode)) throw new Error("نوع الجدول الملون غير مدعوم.");
-        const activeTeacherIds = new Set(state.schedule.cells.map(cell => cell.teacherId));
-        const teachers = [...state.teachers]
-            .filter(teacher => activeTeacherIds.has(teacher.id))
-            .sort((a, b) => a.name.localeCompare(b.name, "ar"));
-        const rowCount = state.days.reduce((sum, day) => sum + Number(day.periods), 0);
-        const fontSize = teachers.length <= 10 ? 6.2 : teachers.length <= 16 ? 5.2 : 4.2;
-        const rowHeight = Math.max(3.1, Math.min(4, 142 / Math.max(1, rowCount)));
-        const title = mode === "classes"
-            ? "الجدول العام الملون (فصول فقط بدون مادة)"
-            : "الجدول العام الملون (مواد فقط بدون فصول)";
-
-        const teacherHeaders = teachers.map(teacher => {
-            const color = teacherPrintColor(teacher.id);
-            return `<th class="teacher-tinted" data-teacher-key="${escapeHtml(teacher.id)}" style="background:${color.background};border-color:${color.border};color:${color.text}"><span class="teacher-name-key">${escapeHtml(teacher.name)}</span></th>`;
-        }).join("");
-
-        const rows = state.days.flatMap(day => Array.from({ length: Number(day.periods) }, (_, index) => {
-            const period = index + 1;
-            const teacherCells = teachers.map(teacher => {
-                const list = indexes.byTeacherSlot.get(`${teacher.id}|${day.id}|${period}`) || [];
-                if (!list.length) return `<td class="grid-empty">—</td>`;
-                const color = teacherPrintColor(teacher.id);
-                const labels = list.map(rawCell => {
-                    const cell = decorateCell(rawCell, catalog);
-                    return mode === "classes" ? cell.className : cell.subjectName;
-                });
-                return `<td class="teacher-tinted" data-print-lesson data-report-mode="${mode}" data-teacher-id="${escapeHtml(teacher.id)}" style="background:${color.background};border-color:${color.border};color:${color.text}"><span class="colored-cell-label">${labels.map(escapeHtml).join("<br>")}</span></td>`;
-            }).join("");
-            return `<tr class="${period === 1 ? "day-start" : ""}">
-                <th class="grid-day">${escapeHtml(day.name)}</th>
-                <th class="grid-period">${period}</th>
-                ${teacherCells}
-            </tr>`;
-        })).join("");
-
-        const table = `<table class="colored-master-grid" data-colored-master-grid="${mode}" style="--grid-font-size:${fontSize}pt;--grid-row-height:${rowHeight}mm">
-            <colgroup><col style="width:7%"><col style="width:4%">${teachers.map(() => "<col>").join("")}</colgroup>
-            <thead><tr><th>اليوم</th><th>ح</th>${teacherHeaders}</tr></thead>
-            <tbody>${rows}</tbody>
-        </table>`;
-        const note = `<p class="colored-grid-note">يظهر داخل كل خلية ${mode === "classes" ? "اسم الفصل فقط" : "اسم المادة فقط"}، ويُعرَّف المعلم باسمه ولونه الثابت.</p>`;
-        return `<section class="print-page colored-master-page" data-report-mode="colored-${mode}">
-            ${reportHeader(title, "الجدول الأسبوعي العام للمدرسة — صفحة واحدة")}
-            ${warning ? `<div class="print-warning">⚠️ ${escapeHtml(warning)}</div>` : ""}
-            ${table}${note}
-        </section>`;
-    }
-
-    function hijriDateParts(dateIso) {
-        const parts = new Intl.DateTimeFormat("en-SA-u-ca-islamic-umalqura", {
-            timeZone: "Asia/Riyadh",
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit"
-        }).formatToParts(new Date(`${dateIso}T12:00:00`));
-        const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
-        return { day: values.day || "", month: values.month || "", year: values.year || "144" };
-    }
-
-    function groupDailyWaitingRecords(records) {
-        const groups = new Map();
-        for (const record of records) {
-            const period = Number(record.period);
-            if (!Number.isInteger(period) || period < 1 || period > 7) {
-                return { ok: false, error: `يوجد سجل انتظار برقم حصة غير صالح: ${record.period}` };
-            }
-            const key = record.absentTeacherId || `name:${record.absentTeacherNameSnapshot || "unknown"}`;
-            if (!groups.has(key)) {
-                groups.set(key, {
-                    key,
-                    absentTeacherId: record.absentTeacherId || "",
-                    absentTeacherName: record.absentTeacherNameSnapshot || "معلم غير معروف",
-                    dayId: record.dayId,
-                    recordsByPeriod: new Map()
-                });
-            }
-            const group = groups.get(key);
-            if (group.dayId !== record.dayId) {
-                return { ok: false, error: `تعارض اليوم الدراسي في سجلات غياب ${group.absentTeacherName}.` };
-            }
-            if (group.recordsByPeriod.has(period)) {
-                return { ok: false, error: `يوجد أكثر من سجل للمعلم ${group.absentTeacherName} في الحصة ${period}.` };
-            }
-            group.recordsByPeriod.set(period, record);
-        }
-        return { ok: true, groups: [...groups.values()] };
-    }
-
-    function officialWaitingAbsentBlock(group, date, hijri) {
-        const dayName = dayById(group.dayId)?.name || group.dayId || "........";
-        const rows = Array.from({ length: 7 }, (_, index) => {
-            const period = index + 1;
-            const record = group.recordsByPeriod.get(period) || null;
-            const substitute = record
-                ? (record.status === "assigned" ? record.substituteTeacherNameSnapshot : "غير مغطاة")
-                : "";
-            const executedWork = record?.executedWorkSnapshot || record?.executedWork || "";
-            const note = record?.note || (record?.status === "uncovered" ? "لم يتم توفير بديل" : "");
-            return `<tr data-waiting-period-row="${period}">
-                <td>${period}</td>
-                <td>${escapeHtml(record?.classNameSnapshot || "")}</td>
-                <td>${escapeHtml(record?.subjectNameSnapshot || "")}</td>
-                <td>${escapeHtml(substitute || "")}</td>
-                <td class="write-space">${escapeHtml(executedWork)}</td>
-                <td class="waiting-signature-cell"></td>
-                <td class="write-space">${escapeHtml(note)}</td>
-            </tr>`;
-        }).join("");
-
-        return `<article class="waiting-absent-block" data-waiting-absent-group data-absent-teacher-id="${escapeHtml(group.absentTeacherId || group.key)}">
-            <div class="waiting-preamble" data-print-preamble>
-                إخواني المعلمين / نظراً لغياب الزميل: <span class="filled-line">${escapeHtml(group.absentTeacherName)}</span>
-                هذا اليوم <span class="filled-line">${escapeHtml(dayName)}</span>
-                الموافق: <span class="filled-line">${escapeHtml(hijri.day)} / ${escapeHtml(hijri.month)} / ${escapeHtml(hijri.year)} هـ</span>
-                نأمل تسديد مكانه حسب الجدول الموضح والتوقيع بالعلم.. ولكم جزيل الشكر
-            </div>
-            <table class="waiting-form-table">
-                <colgroup>
-                    <col style="width:6%"><col style="width:12%"><col style="width:14%"><col style="width:20%"><col style="width:24%"><col style="width:12%"><col style="width:12%">
-                </colgroup>
-                <thead><tr><th>الحصة</th><th>الفصل</th><th>المادة</th><th>المعلم المنتظر</th><th>ما تم تنفيذه في حصة الانتظار</th><th>التوقيع</th><th>ملحوظات</th></tr></thead>
-                <tbody>${rows}</tbody>
-            </table>
-        </article>`;
-    }
-
-    function officialDailyWaitingReport(records, date) {
-        const grouped = groupDailyWaitingRecords(records);
-        if (!grouped.ok) return grouped;
-        const hijri = hijriDateParts(date);
-        const groupsHtml = grouped.groups.length
-            ? grouped.groups.map(group => officialWaitingAbsentBlock(group, date, hijri)).join("")
-            : `<div class="waiting-report-empty">لا توجد سجلات انتظار معتمدة في هذا التاريخ.</div>`;
-        const dayNames = [...new Set(grouped.groups.map(group => dayById(group.dayId)?.name || group.dayId).filter(Boolean))].join("، ");
-        const html = `<section class="print-page official-waiting-page" data-report-mode="official-daily-waiting">
-            <header class="official-waiting-header">
-                <div><strong>${escapeHtml(state.school.name)}</strong><br>العام الدراسي: ${escapeHtml(state.school.academicYear)}</div>
-                <h1>سجل توزيع الانتظار اليومي</h1>
-                <div class="left">اليوم: ${escapeHtml(dayNames || "........")}<br>التاريخ: ${escapeHtml(formatDate(date))}</div>
-            </header>
-            <main>${groupsHtml}</main>
-            <footer class="waiting-report-footer" data-print-footer>وكيل الشؤون التعليمية / ............................ التوقيع: ............................</footer>
-        </section>`;
-        return { ok: true, html, groupCount: grouped.groups.length };
-    }
-
-    function ensurePrintableSchedule() {
-        if (state.schedule.status !== "success" || !state.schedule.cells.length) {
-            showToast("لا يوجد جدول مولّد للطباعة.", "error");
-            return null;
-        }
-        const validation = validateSchedule();
-        if (!validation.valid) {
-            showToast(`تعذر إنشاء تقرير رسمي: ${validation.errors[0]}`, "error", 6000);
-            return null;
-        }
-        return validation;
-    }
-
-    function openReport(type) {
-        let title = "";
-        let html = "";
-        let orientation = "landscape";
-
-        if (["all-classes", "all-teachers", "teacher", "class", "stage", "colored-classes-only", "colored-subjects-only"].includes(type)) {
-            const validation = ensurePrintableSchedule();
-            if (!validation) return;
-            const warning = validation.warnings[0] || "";
-            const indexes = buildScheduleIndexes();
-            const catalog = buildCatalog();
-
-            if (type === "all-classes") {
-                title = "الجدول العام للمدرسة بترتيب الفصول";
-                html = allClasses().sort((a, b) => a.stageName.localeCompare(b.stageName, "ar") || a.name.localeCompare(b.name, "ar")).map(schoolClass => reportPage(
-                    `جدول الفصل: ${schoolClass.name}`,
-                    schoolClass.stageName,
-                    timetableTable("class", schoolClass.id, indexes, catalog),
-                    warning
-                )).join("");
-            }
-
-            if (type === "all-teachers") {
-                title = "الجدول العام للمدرسة بترتيب المعلمين";
-                html = [...state.teachers].sort((a, b) => a.name.localeCompare(b.name, "ar")).map(teacher => reportPage(
-                    `جدول المعلم: ${teacher.name}`,
-                    `الحصص الأساسية الأسبوعية: ${weeklyBaseCount(teacher.id)}`,
-                    timetableTable("teacher", teacher.id, indexes, catalog),
-                    warning
-                )).join("");
-            }
-
-            if (type === "teacher") {
-                const teacher = teacherById(elements.reportTeacherSelect.value);
-                if (!teacher) return showToast("اختر معلماً.", "error");
-                title = `جدول المعلم ${teacher.name}`;
-                html = reportPage(title, `الحصص الأساسية الأسبوعية: ${weeklyBaseCount(teacher.id)}`, timetableTable("teacher", teacher.id, indexes, catalog), warning);
-            }
-
-            if (type === "class") {
-                const context = classContext(elements.reportClassSelect.value);
-                if (!context) return showToast("اختر فصلاً.", "error");
-                title = `جدول الفصل ${context.schoolClass.name}`;
-                html = reportPage(title, context.stage.name, timetableTable("class", context.schoolClass.id, indexes, catalog), warning);
-            }
-
-            if (type === "stage") {
-                const stage = stageById(elements.reportStageSelect.value);
-                if (!stage) return showToast("اختر مرحلة دراسية.", "error");
-                title = `جداول ${stage.name}`;
-                html = stage.classes.map(schoolClass => reportPage(`جدول الفصل: ${schoolClass.name}`, stage.name, timetableTable("class", schoolClass.id, indexes, catalog), warning)).join("");
-            }
-
-            if (type === "colored-classes-only") {
-                title = "الجدول العام الملون (فصول فقط بدون مادة)";
-                html = coloredGeneralGridPage("classes", indexes, catalog, warning);
-                orientation = "landscape";
-            }
-
-            if (type === "colored-subjects-only") {
-                title = "الجدول العام الملون (مواد فقط بدون فصول)";
-                html = coloredGeneralGridPage("subjects", indexes, catalog, warning);
-                orientation = "landscape";
-            }
-        }
-
-        if (type === "daily-waiting") {
-            const date = elements.dailyReportDate.value;
-            if (!date) return showToast("اختر تاريخ التقرير.", "error");
-            const records = state.waiting.archive
-                .filter(record => record.date === date && ["assigned", "uncovered"].includes(record.status))
-                .sort((a, b) => Number(a.period) - Number(b.period) || String(a.classNameSnapshot).localeCompare(String(b.classNameSnapshot), "ar"));
-            title = "تقرير حصص الانتظار اليومي";
-            const report = officialDailyWaitingReport(records, date);
-            if (!report.ok) return showToast(report.error, "error", 6500);
-            html = report.html;
-            orientation = "portrait";
-        }
-
-        if (type === "cumulative-waiting") {
-            const query = normalizeArabicSearch(elements.cumulativeTeacherSearch.value);
-            if (!query) return showToast("اكتب اسم المعلم للبحث.", "error");
-            const matches = state.teachers.filter(teacher => normalizeArabicSearch(teacher.name).includes(query));
-            if (!matches.length) return showToast("لم يُعثر على معلم بهذا الاسم.", "error");
-            const exact = matches.find(teacher => normalizeArabicSearch(teacher.name) === query);
-            if (!exact && matches.length > 1) return showToast(`الاسم يطابق ${matches.length} معلمين؛ اكتب الاسم كاملاً.`, "warning");
-            const teacher = exact || matches[0];
-            const records = effectiveWaitingRecords()
-                .filter(record => record.substituteTeacherId === teacher.id)
-                .sort((a, b) => a.date.localeCompare(b.date) || Number(a.period) - Number(b.period));
-            const rows = records.length ? records.map(record => `<tr>
-                <td>${escapeHtml(formatDate(record.date))}</td>
-                <td>${escapeHtml(dayById(record.dayId)?.name || record.dayId)}</td>
-                <td>الحصة ${Number(record.period)}</td>
-                <td>${escapeHtml(record.classNameSnapshot)}</td>
-                <td>${escapeHtml(record.subjectNameSnapshot)}</td>
-                <td>${escapeHtml(record.absentTeacherNameSnapshot)}</td>
-                <td>${Number(record.cumulativeBefore ?? 0)} ← ${Number(record.cumulativeAfter ?? 0)}</td>
-            </tr>`).join("") : `<tr><td colspan="7" style="height:52px">لا توجد حصص انتظار مؤرشفة لهذا المعلم.</td></tr>`;
-            const base = weeklyBaseCount(teacher.id);
-            const waiting = records.length;
-            const cumulative = base + waiting;
-            title = `تقرير الانتظار التراكمي للمعلم: ${teacher.name}`;
-            const table = `<table class="print-table"><thead><tr><th>التاريخ</th><th>اليوم</th><th>الحصة</th><th>الفصل</th><th>المادة المغطاة</th><th>المعلم الأساسي</th><th>التراكمي قبل / بعد</th></tr></thead><tbody>${rows}</tbody></table>`;
-            const summary = `<div class="print-summary"><div><strong>الحصص الأساسية الأسبوعية الحالية</strong><br>${base}</div><div><strong>حصص الانتظار المؤرشفة</strong><br>${waiting}</div><div><strong>المجموع التراكمي النهائي</strong><br><span style="font-size:20px;font-weight:900">${cumulative}</span></div></div>`;
-            html = reportPage(title, `عدد السجلات: ${waiting}`, table + summary);
-        }
-
-        if (!html) return showToast("تعذر إنشاء التقرير المطلوب.", "error");
-        openReportModal(title, html, orientation);
-    }
-
-    function openReportModal(title, html, orientation = "landscape") {
-        state.ui.currentReportTitle = title;
-        state.ui.currentReportOrientation = orientation;
-        elements.reportModalTitle.textContent = title;
-        elements.printRoot.innerHTML = html;
-        elements.reportModal.classList.remove("hidden");
-        document.body.style.overflow = "hidden";
-        elements.closeReportModal.focus();
-    }
-
-    function closeReportModal() {
-        elements.reportModal.classList.add("hidden");
-        document.body.style.overflow = "";
-    }
-
-    function printCurrentReport() {
-        if (!elements.printRoot.children.length) return showToast("لا يوجد تقرير جاهز للطباعة.", "error");
-        elements.dynamicPrintPageStyle.textContent = `@page { size: A4 ${state.ui.currentReportOrientation}; margin: 10mm; }`;
-        const previousTitle = document.title;
-        document.title = state.ui.currentReportTitle;
-        const restore = () => {
-            document.title = previousTitle;
-            window.removeEventListener("afterprint", restore);
-        };
-        window.addEventListener("afterprint", restore);
-        requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
-    }
-
-    function switchView(view) {
-        state.ui.activeView = view;
-        document.querySelectorAll(".app-view").forEach(section => { section.hidden = section.id !== `view-${view}`; });
-        document.querySelectorAll(".nav-button").forEach(button => button.classList.toggle("active", button.dataset.view === view));
-        if (view === "reports") renderAllSelectors();
-    }
-
-    function handleDelegatedClick(event) {
-        const nav = event.target.closest("[data-view]");
-        if (nav) return switchView(nav.dataset.view);
-
-        const reportButton = event.target.closest("[data-report]");
-        if (reportButton) return openReport(reportButton.dataset.report);
-
-        const editTeacher = event.target.closest("[data-edit-teacher]");
-        if (editTeacher) {
-            const teacher = teacherById(editTeacher.dataset.editTeacher);
-            if (!teacher) return;
-            elements.teacherEditId.value = teacher.id;
-            elements.teacherName.value = teacher.name;
-            elements.teacherIdentity.value = teacher.identity;
-            elements.teacherMobile.value = teacher.mobile;
-            elements.teacherName.focus();
-            return;
-        }
-
-        const deleteTeacher = event.target.closest("[data-delete-teacher]");
-        if (deleteTeacher) {
-            const id = deleteTeacher.dataset.deleteTeacher;
-            if (teacherIsAssigned(id)) return showToast("لا يمكن حذف معلم مرتبط بمادة. غيّر إسناد المواد أولًا.", "error");
-            if (!confirm("هل تريد حذف هذا المعلم؟ سيبقى اسمه محفوظًا في تقارير الأرشيف القديمة.")) return;
-            state.teachers = state.teachers.filter(teacher => teacher.id !== id);
-            renderTeachersTable();
-            markStructuralChange("تم حذف المعلم.");
-            return;
-        }
-
-        const editClass = event.target.closest("[data-edit-class]");
-        if (editClass) {
-            const stage = stageById(state.ui.settingsStageId);
-            const schoolClass = stage?.classes.find(item => item.id === editClass.dataset.editClass);
-            if (!schoolClass) return;
-            const nextName = prompt("اسم الفصل الجديد:", schoolClass.name)?.trim();
-            if (!nextName || nextName === schoolClass.name) return;
-            schoolClass.name = nextName;
-            renderStageEditor();
-            markStructuralChange("تم تعديل اسم الفصل.");
-            return;
-        }
-
-        const deleteClass = event.target.closest("[data-delete-class]");
-        if (deleteClass) {
-            const stage = stageById(state.ui.settingsStageId);
-            if (!stage || !confirm("هل تريد حذف الفصل وكل إسناداته من المواد؟")) return;
-            const classId = deleteClass.dataset.deleteClass;
-            stage.classes = stage.classes.filter(item => item.id !== classId);
-            for (const subject of stage.subjects) delete subject.teacherByClass[classId];
-            renderStageEditor();
-            markStructuralChange("تم حذف الفصل.");
-            return;
-        }
-
-        const deleteSubject = event.target.closest("[data-delete-subject]");
-        if (deleteSubject) {
-            const stage = stageById(state.ui.settingsStageId);
-            if (!stage || !confirm("هل تريد حذف هذه المادة؟")) return;
-            stage.subjects = stage.subjects.filter(item => item.id !== deleteSubject.dataset.deleteSubject);
-            renderStageEditor();
-            markStructuralChange("تم حذف المادة.");
-        }
-    }
-
-    function handleDelegatedChange(event) {
-        const capacity = event.target.closest("[data-day-capacity]");
-        if (capacity) {
-            const value = Number(capacity.value);
-            const day = dayById(capacity.dataset.dayCapacity);
-            if (!day || !Number.isInteger(value) || value < 1 || value > 12) {
-                capacity.value = day?.periods || 7;
-                return showToast("سعة اليوم يجب أن تكون بين 1 و12.", "error");
-            }
-            day.periods = value;
-            markStructuralChange(`تم تحديث سعة يوم ${day.name}.`);
-            return;
-        }
-
-        const stage = stageById(state.ui.settingsStageId);
-        if (!stage) return;
-
-        const subjectName = event.target.closest("[data-subject-name]");
-        if (subjectName) {
-            const subject = stage.subjects.find(item => item.id === subjectName.dataset.subjectName);
-            const value = subjectName.value.trim();
-            if (!subject || !value) return renderStageEditor();
-            subject.name = value;
-            markStructuralChange("تم تعديل اسم المادة.");
-            return;
-        }
-
-        const subjectQuota = event.target.closest("[data-subject-quota]");
-        if (subjectQuota) {
-            const subject = stage.subjects.find(item => item.id === subjectQuota.dataset.subjectQuota);
-            const value = Number(subjectQuota.value);
-            if (!subject || !Number.isInteger(value) || value < 1 || value > 10 || (subject.isArt && value % 2 !== 0)) {
-                showToast("النصاب غير صالح، ونصاب الفنية يجب أن يكون زوجيًا.", "error");
-                return renderStageEditor();
-            }
-            subject.quota = value;
-            markStructuralChange("تم تعديل نصاب المادة.");
-            return;
-        }
-
-        const subjectArt = event.target.closest("[data-subject-art]");
-        if (subjectArt) {
-            const subject = stage.subjects.find(item => item.id === subjectArt.dataset.subjectArt);
-            if (!subject) return;
-            if (subjectArt.checked && Number(subject.quota) % 2 !== 0) {
-                subjectArt.checked = false;
-                return showToast("حوّل النصاب إلى عدد زوجي قبل تفعيل التربية الفنية.", "error");
-            }
-            subject.isArt = subjectArt.checked;
-            markStructuralChange("تم تعديل نوع المادة.");
-            return;
-        }
-
-        const subjectTeacher = event.target.closest("[data-subject-teacher]");
-        if (subjectTeacher) {
-            const subject = stage.subjects.find(item => item.id === subjectTeacher.dataset.subjectTeacher);
-            if (!subject) return;
-            subject.teacherByClass[subjectTeacher.dataset.classId] = subjectTeacher.value;
-            markStructuralChange("تم تعديل إسناد المعلم.");
-        }
-    }
-
-    function cacheElements() {
-        const ids = [
-            "toast", "scheduleStatus", "scheduleStageFilter", "scheduleBoard", "generateScheduleTop", "openClassReportsTop",
-            "absenceDate", "absenceDay", "absentTeacher", "previewAbsence", "commitWaiting", "waitingSummary", "vacanciesBoard",
-            "reportTeacherSelect", "reportClassSelect", "reportStageSelect", "dailyReportDate", "cumulativeTeacherSearch", "teacherNamesList",
-            "schoolName", "academicYear", "principalName", "masterPeriods", "applyPeriodsToAll", "dayCapacityInputs",
-            "teacherExcelFile", "teacherForm", "teacherEditId", "teacherName", "teacherIdentity", "teacherMobile", "teachersTable",
-            "settingsStageSelect", "addStage", "newClassName", "addClass", "classesList", "copyClassesTarget", "copyClasses",
-            "newSubjectName", "newSubjectQuota", "newSubjectArt", "addSubject", "subjectsList", "copySubjectsTarget", "copySubjects",
-            "generateScheduleSettings", "reportModal", "reportModalTitle", "reportModalHint", "closeReportModal", "printCurrentReport", "printRoot", "dynamicPrintPageStyle"
-        ];
-        for (const id of ids) elements[id] = document.getElementById(id);
-    }
-
-    function bindEvents() {
-        document.addEventListener("click", handleDelegatedClick);
-        document.addEventListener("change", handleDelegatedChange);
-        elements.generateScheduleTop.addEventListener("click", () => generateSchedule());
-        elements.generateScheduleSettings.addEventListener("click", () => generateSchedule());
-        elements.openClassReportsTop.addEventListener("click", () => openReport("all-classes"));
-        elements.scheduleStageFilter.addEventListener("change", () => { state.ui.scheduleStage = elements.scheduleStageFilter.value; renderSchedule(); });
-
-        elements.absenceDate.addEventListener("change", () => {
-            elements.absenceDay.value = dayIdFromDate(elements.absenceDate.value);
-            state.waiting.activePreview = null;
-            renderWaitingPreview();
-        });
-        elements.absenceDay.addEventListener("change", () => { state.waiting.activePreview = null; renderWaitingPreview(); });
-        elements.absentTeacher.addEventListener("change", () => {
-            state.waiting.activePreview = null;
-            renderWaitingPreview();
-            if (elements.absentTeacher.value) previewAbsence();
-        });
-        elements.previewAbsence.addEventListener("click", previewAbsence);
-        elements.commitWaiting.addEventListener("click", commitWaitingPreview);
-
-        elements.teacherForm.addEventListener("submit", saveTeacherFromForm);
-        elements.teacherExcelFile.addEventListener("change", event => importTeachersFromExcel(event.target.files[0]));
-        elements.settingsStageSelect.addEventListener("change", () => { state.ui.settingsStageId = elements.settingsStageSelect.value; renderStageEditor(); });
-        elements.addClass.addEventListener("click", addClass);
-        elements.addSubject.addEventListener("click", addSubject);
-        elements.copyClasses.addEventListener("click", copyClasses);
-        elements.copySubjects.addEventListener("click", copySubjects);
-        elements.addStage.addEventListener("click", () => {
-            const name = prompt("اسم المرحلة الجديدة:")?.trim();
-            if (!name) return;
-            const stage = { id: newId("stage"), name, classes: [], subjects: [] };
-            state.stages.push(stage);
-            state.ui.settingsStageId = stage.id;
-            renderStageEditor();
-            markStructuralChange("تمت إضافة المرحلة.");
+          row.remove();
+          renumberRows();
         });
 
-        elements.applyPeriodsToAll.addEventListener("click", () => {
-            const value = Number(elements.masterPeriods.value);
-            if (!Number.isInteger(value) || value < 1 || value > 12) return showToast("أدخل عددًا بين 1 و12.", "error");
-            state.days.forEach(day => { day.periods = value; });
-            renderDayCapacities();
-            markStructuralChange("تم تطبيق السعة على جميع الأيام.");
-        });
+        rowsContainer.appendChild(fragment);
+        renumberRows();
+      }
 
-        elements.schoolName.addEventListener("input", () => { state.school.name = elements.schoolName.value.trim() || "اسم المدرسة"; });
-        elements.academicYear.addEventListener("input", () => { state.school.academicYear = elements.academicYear.value.trim(); });
-        elements.principalName.addEventListener("input", () => { state.school.principal = elements.principalName.value.trim(); });
+      async function waitForLogo() {
+        if (logo.hidden || logo.complete) {
+          return;
+        }
 
-        elements.closeReportModal.addEventListener("click", closeReportModal);
-        elements.printCurrentReport.addEventListener("click", printCurrentReport);
-        elements.reportModal.addEventListener("click", event => { if (event.target === elements.reportModal) closeReportModal(); });
-        document.addEventListener("keydown", event => { if (event.key === "Escape" && !elements.reportModal.classList.contains("hidden")) closeReportModal(); });
-    }
+        await Promise.race([
+          new Promise((resolve) => {
+            logo.addEventListener("load", resolve, { once: true });
+            logo.addEventListener("error", resolve, { once: true });
+          }),
+          new Promise((resolve) => window.setTimeout(resolve, 1500))
+        ]);
+      }
 
-    function initialize() {
-        cacheElements();
-        state.waiting.archive = loadWaitingArchive();
-        const today = riyadhDate();
-        elements.absenceDate.value = today;
-        elements.dailyReportDate.value = today;
-        bindEvents();
-        renderAllSelectors();
-        elements.absenceDay.value = dayIdFromDate(today);
-        renderSettings();
-        renderWaitingPreview();
-        generateSchedule(false);
-        if (archiveLoadWarning) setTimeout(() => showToast(archiveLoadWarning, "warning", 6500), 300);
-    }
+      logo.addEventListener("error", () => {
+        logo.hidden = true;
+        logoFallback.hidden = false;
+      });
 
-    initialize();
-})();
-</script>
+      schoolInput.addEventListener("input", syncReportMetadata);
+      dayInput.addEventListener("input", syncReportMetadata);
+      dateInput.addEventListener("input", syncReportMetadata);
+      addRowButton.addEventListener("click", addRow);
+
+      printButton.addEventListener("click", async () => {
+        syncReportMetadata();
+        await waitForLogo();
+        window.print();
+      });
+
+      window.addEventListener("beforeprint", syncReportMetadata);
+
+      /* ثمانية أسطر افتراضية في التقرير */
+      for (let index = 0; index < 8; index += 1) {
+        addRow();
+      }
+
+      syncReportMetadata();
+    })();
+  </script>
 </body>
 </html>
