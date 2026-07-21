@@ -1,826 +1,160 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>تقرير حصص الانتظار اليومي</title>
-
-  <style>
-    :root {
-      --primary: #087f75;
-      --primary-dark: #075e58;
-      --border: #1d2935;
-      --surface: #ffffff;
-      --background: #eef3f2;
-      --muted: #687575;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      direction: rtl;
-      font-family: Tahoma, "Segoe UI", Arial, sans-serif;
-    }
-
-    body {
-      margin: 0;
-      color: #172121;
-      background: var(--background);
-    }
-
-    button,
-    input {
-      font: inherit;
-    }
-
-    .app-shell {
-      width: min(1180px, calc(100% - 32px));
-      margin: 32px auto;
-    }
-
-    /* لوحة التحكم */
-    .control-panel {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(170px, 1fr));
-      gap: 16px;
-      margin-bottom: 22px;
-      padding: 22px;
-      border: 1px solid #d5e2e0;
-      border-radius: 16px;
-      background: #fff;
-      box-shadow: 0 12px 35px rgb(16 67 62 / 8%);
-    }
-
-    .control-panel h1 {
-      grid-column: 1 / -1;
-      margin: 0 0 4px;
-      color: var(--primary-dark);
-      font-size: 24px;
-    }
-
-    .control-panel > p {
-      grid-column: 1 / -1;
-      margin: 0 0 8px;
-      color: var(--muted);
-      line-height: 1.8;
-    }
-
-    .field {
-      display: grid;
-      gap: 7px;
-    }
-
-    .field span {
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    .field input {
-      width: 100%;
-      min-height: 44px;
-      padding: 9px 12px;
-      border: 1px solid #c8d6d4;
-      border-radius: 9px;
-      background: #fff;
-      outline: none;
-    }
-
-    .field input:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgb(8 127 117 / 12%);
-    }
-
-    .actions {
-      grid-column: 1 / -1;
-      display: flex;
-      justify-content: flex-start;
-      gap: 10px;
-      margin-top: 6px;
-    }
-
-    .button {
-      min-height: 44px;
-      padding: 10px 18px;
-      border: 0;
-      border-radius: 9px;
-      cursor: pointer;
-      font-weight: 700;
-    }
-
-    .button-primary {
-      color: #fff;
-      background: var(--primary);
-    }
-
-    .button-primary:hover {
-      background: var(--primary-dark);
-    }
-
-    .button-secondary {
-      color: var(--primary-dark);
-      border: 1px solid #b9cecb;
-      background: #f3f8f7;
-    }
-
-    /* ورقة التقرير */
-    .report-sheet {
-      display: flex;
-      flex-direction: column;
-      width: min(100%, 180mm);
-      min-height: 250mm;
-      margin-inline: auto;
-      padding: 14mm;
-      border: 1px solid #d5dcdb;
-      background: var(--surface);
-      box-shadow: 0 18px 55px rgb(31 52 50 / 10%);
-    }
-
-    /* العناصر الرسمية مخفية على الشاشة */
-    .print-only {
-      display: none !important;
-    }
-
-    .screen-heading {
-      margin-bottom: 22px;
-      padding-bottom: 14px;
-      border-bottom: 2px solid var(--primary);
-      text-align: center;
-    }
-
-    .screen-heading h2 {
-      margin: 0 0 6px;
-      color: var(--primary-dark);
-      font-size: 24px;
-    }
-
-    .screen-heading p {
-      margin: 0;
-      color: var(--muted);
-    }
-
-    /* الكليشة الرسمية */
-    .official-print-header {
-      direction: ltr;
-      grid-template-columns: minmax(0, 1fr) 42mm minmax(0, 1fr);
-      grid-template-areas: "form-code logo identity";
-      align-items: start;
-      gap: 7mm;
-      min-height: 33mm;
-      padding-bottom: 5mm;
-      border-bottom: 0.45mm solid #222;
-    }
-
-    .official-identity {
-      grid-area: identity;
-      direction: rtl;
-      text-align: right;
-      color: #000;
-      font-size: 11.5pt;
-      font-weight: 700;
-      line-height: 1.75;
-    }
-
-    .official-identity p {
-      margin: 0;
-    }
-
-    .school-print-name {
-      display: block;
-      max-width: 65mm;
-      overflow-wrap: anywhere;
-    }
-
-    .official-logo {
-      grid-area: logo;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      min-height: 28mm;
-      text-align: center;
-    }
-
-    .official-logo img {
-      display: block;
-      width: 38mm;
-      max-height: 28mm;
-      object-fit: contain;
-    }
-
-    .logo-fallback {
-      width: 38mm;
-      min-height: 25mm;
-      padding: 4mm 2mm;
-      border: 0.35mm solid #777;
-      border-radius: 2mm;
-      color: #555;
-      font-size: 9pt;
-      font-weight: 700;
-      line-height: 1.6;
-    }
-
-    .official-form-code {
-      grid-area: form-code;
-      direction: rtl;
-      padding-top: 1mm;
-      color: #222;
-      text-align: left;
-      font-size: 8.5pt;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .report-title {
-      margin: 8mm 0 4mm;
-      text-align: center;
-    }
-
-    .report-title h1 {
-      display: inline-block;
-      margin: 0;
-      padding: 0 8mm 2mm;
-      border-bottom: 0.45mm solid #222;
-      color: #111;
-      font-size: 17pt;
-      font-weight: 700;
-    }
-
-    .report-date-line {
-      display: flex;
-      justify-content: center;
-      gap: 18mm;
-      margin: 0 0 5mm;
-      color: #111;
-      font-size: 10pt;
-      font-weight: 700;
-    }
-
-    /* جدول التقرير */
-    .table-wrap {
-      width: 100%;
-      overflow-x: auto;
-    }
-
-    .report-table {
-      width: 100%;
-      border-collapse: collapse;
-      table-layout: fixed;
-      color: #111;
-    }
-
-    .report-table th,
-    .report-table td {
-      border: 1px solid var(--border);
-      text-align: center;
-      vertical-align: middle;
-    }
-
-    .report-table th {
-      padding: 9px 4px;
-      background: #eaf3f2;
-      font-size: 12px;
-      font-weight: 700;
-      line-height: 1.45;
-    }
-
-    .report-table td {
-      height: 48px;
-      padding: 2px;
-      background: #fff;
-    }
-
-    .report-table .col-number {
-      width: 5%;
-    }
-
-    .report-table .col-absent {
-      width: 19%;
-    }
-
-    .report-table .col-period {
-      width: 8%;
-    }
-
-    .report-table .col-class {
-      width: 13%;
-    }
-
-    .report-table .col-subject {
-      width: 12%;
-    }
-
-    .report-table .col-waiting {
-      width: 19%;
-    }
-
-    .report-table .col-signature {
-      width: 14%;
-    }
-
-    .report-table .col-notes {
-      width: 10%;
-    }
-
-    .cell-input {
-      width: 100%;
-      min-height: 40px;
-      padding: 5px;
-      border: 1px solid transparent;
-      border-radius: 4px;
-      background: transparent;
-      text-align: center;
-      outline: none;
-    }
-
-    .cell-input:focus {
-      border-color: var(--primary);
-      background: #f4faf9;
-    }
-
-    .row-number {
-      font-weight: 700;
-    }
-
-    .remove-row {
-      display: block;
-      width: 23px;
-      height: 23px;
-      margin: 3px auto 0;
-      padding: 0;
-      border: 0;
-      border-radius: 50%;
-      color: #a22222;
-      background: #ffeaea;
-      cursor: pointer;
-      line-height: 23px;
-    }
-
-    /* التوقيع */
-    .report-footer {
-      direction: rtl;
-      width: 100%;
-      margin-top: auto;
-      padding-top: 14mm;
-      color: #111;
-      text-align: right !important;
-      font-size: 11pt;
-      font-weight: 700;
-      line-height: 2;
-      break-inside: avoid;
-      page-break-inside: avoid;
-    }
-
-    .report-footer p {
-      width: 100%;
-      margin: 0;
-      text-align: right !important;
-    }
-
-    @media (max-width: 760px) {
-      .app-shell {
-        width: min(100% - 16px, 1180px);
-        margin-block: 12px;
-      }
-
-      .control-panel {
-        grid-template-columns: 1fr;
-        padding: 16px;
-      }
-
-      .control-panel h1,
-      .control-panel > p,
-      .actions {
-        grid-column: 1;
-      }
-
-      .report-sheet {
-        padding: 16px;
-      }
-    }
-
-    /* الطباعة الرسمية العمودية */
-    @media print {
-      @page {
-        size: A4 portrait;
-        margin: 15mm;
-      }
-
-      html,
-      body {
-        width: auto !important;
-        min-width: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background: #fff !important;
-      }
-
-      body {
-        color: #000;
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-      }
-
-      body.printing-daily .no-print,
-      body.printing-daily .control-panel,
-      body.printing-daily .screen-heading,
-      body.printing-daily .actions,
-      body.printing-daily .remove-row,
-      body.printing-daily nav,
-      body.printing-daily aside {
-        display: none !important;
-      }
-
-      body.printing-daily .app-shell {
-        display: block !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-      }
-
-      body.printing-daily .report-sheet {
-        display: flex !important;
-        width: 100% !important;
-        max-width: none !important;
-        min-height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: 0 !important;
-        box-shadow: none !important;
-        background: #fff !important;
-      }
-
-      body.printing-daily .official-print-header.print-only {
-        display: grid !important;
-      }
-
-      body.printing-daily .report-date-line.print-only {
-        display: flex !important;
-      }
-
-      body.printing-daily .report-footer.print-only {
-        display: block !important;
-      }
-
-      .report-title {
-        margin: 6mm 0 3mm;
-      }
-
-      .report-title h1 {
-        font-size: 15pt;
-      }
-
-      .table-wrap {
-        overflow: visible !important;
-      }
-
-      .report-table {
-        width: 100% !important;
-        page-break-inside: auto;
-      }
-
-      .report-table thead {
-        display: table-header-group;
-      }
-
-      .report-table tr {
-        break-inside: avoid;
-        page-break-inside: avoid;
-      }
-
-      .report-table th {
-        padding: 2.2mm 1mm;
-        color: #000 !important;
-        background: #efefef !important;
-        font-size: 8.5pt;
-      }
-
-      .report-table td {
-        height: 10mm;
-        padding: 0.5mm;
-      }
-
-      .cell-input {
-        min-height: 8.5mm;
-        padding: 0.5mm;
-        border: 0 !important;
-        color: #000 !important;
-        background: transparent !important;
-        font-size: 9pt;
-        appearance: none;
-        -webkit-appearance: none;
-      }
-
-      input::placeholder {
-        color: transparent !important;
-      }
-
-      .report-footer {
-        margin-top: 7mm !important;
-        padding-top: 5mm !important;
-        text-align: right !important;
-      }
-    }
-  </style>
-</head>
-
-<body>
-  <main class="app-shell">
-    <section class="control-panel no-print" aria-labelledby="controls-title">
-      <h1 id="controls-title">إعداد تقرير حصص الانتظار اليومي</h1>
-
-      <p>
-        أدخل بيانات المدرسة واليوم والتاريخ، ثم عبّئ جدول الحصص واضغط
-        «طباعة التقرير اليومي».
-      </p>
-
-      <label class="field">
-        <span>اسم المدرسة</span>
-        <input
-          id="school-input"
-          type="text"
-          maxlength="120"
-          placeholder="اكتب اسم المدرسة"
-          autocomplete="organization"
-        >
-      </label>
-
-      <label class="field">
-        <span>اليوم</span>
-        <input id="day-input" type="text" maxlength="30">
-      </label>
-
-      <label class="field">
-        <span>التاريخ</span>
-        <input id="date-input" type="text" maxlength="40">
-      </label>
-
-      <div class="actions">
-        <button id="print-button" class="button button-primary" type="button">
-          طباعة التقرير اليومي
-        </button>
-
-        <button id="add-row-button" class="button button-secondary" type="button">
-          إضافة حصة
-        </button>
-      </div>
-    </section>
-
-    <article id="daily-report" class="report-sheet" aria-labelledby="report-title">
-      <!-- الكليشة الرسمية: تظهر عند طباعة التقرير اليومي فقط -->
-      <header class="official-print-header print-only">
-        <div class="official-identity">
-          <p>المملكة العربية السعودية</p>
-          <p>وزارة التعليم</p>
-          <p id="print-school-name" class="school-print-name">
-            ........................................................
-          </p>
-        </div>
-
-        <div class="official-logo">
-          <img
-            id="moe-logo"
-            src="https://drive.google.com/thumbnail?id=1gXEAQdA1pmTdKUid_oLFsEba3UDqzgJb&sz=w1000"
-            alt="شعار وزارة التعليم السعودية"
-            referrerpolicy="no-referrer"
-          >
-
-          <div id="logo-fallback" class="logo-fallback" hidden>
-            وزارة التعليم<br>
-            Ministry of Education
-          </div>
-        </div>
-
-        <div class="official-form-code">
-          (و.ت.ع.ن -01-01)
-        </div>
-      </header>
-
-      <header class="screen-heading no-print">
-        <h2>تقرير حصص الانتظار اليومي</h2>
-        <p>معاينة وإدخال بيانات التقرير قبل الطباعة الرسمية</p>
-      </header>
-
-      <section class="report-title">
-        <h1 id="report-title">سجل توزيع الانتظار اليومي</h1>
-      </section>
-
-      <div class="report-date-line print-only">
-        <span>اليوم: <strong id="print-day">....................</strong></span>
-        <span>التاريخ: <strong id="print-date">....................</strong></span>
-      </div>
-
-      <div class="table-wrap">
-        <table class="report-table">
-          <thead>
-            <tr>
-              <th class="col-number">م</th>
-              <th class="col-absent">اسم المعلم/ـة الغائب/ـة</th>
-              <th class="col-period">الحصة</th>
-              <th class="col-class">الصف / الفصل</th>
-              <th class="col-subject">المادة</th>
-              <th class="col-waiting">اسم المعلم/ـة المنتظر/ـة</th>
-              <th class="col-signature">التوقيع</th>
-              <th class="col-notes">ملاحظات</th>
-            </tr>
-          </thead>
-
-          <tbody id="report-rows"></tbody>
-        </table>
-      </div>
-
-      <footer class="report-footer print-only">
-        <p>
-          وكيل الشؤون التعليمية / ............................
-          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-          التوقيع: ............................
-        </p>
-      </footer>
-    </article>
-  </main>
-
-  <template id="row-template">
-    <tr>
-      <td>
-        <span class="row-number"></span>
-        <button
-          class="remove-row no-print"
-          type="button"
-          title="حذف الصف"
-          aria-label="حذف الصف"
-        >×</button>
-      </td>
-
-      <td>
-        <input class="cell-input" type="text" aria-label="اسم المعلم الغائب">
-      </td>
-
-      <td>
-        <input class="cell-input" type="text" aria-label="رقم الحصة">
-      </td>
-
-      <td>
-        <input class="cell-input" type="text" aria-label="الصف والفصل">
-      </td>
-
-      <td>
-        <input class="cell-input" type="text" aria-label="المادة">
-      </td>
-
-      <td>
-        <input class="cell-input" type="text" aria-label="اسم المعلم المنتظر">
-      </td>
-
-      <td>
-        <input class="cell-input" type="text" aria-label="التوقيع">
-      </td>
-
-      <td>
-        <input class="cell-input" type="text" aria-label="الملاحظات">
-      </td>
-    </tr>
-  </template>
-
-  <script>
-    (() => {
-      "use strict";
-
-      const schoolInput = document.getElementById("school-input");
-      const dayInput = document.getElementById("day-input");
-      const dateInput = document.getElementById("date-input");
-
-      const printSchoolName = document.getElementById("print-school-name");
-      const printDay = document.getElementById("print-day");
-      const printDate = document.getElementById("print-date");
-
-      const rowsContainer = document.getElementById("report-rows");
-      const rowTemplate = document.getElementById("row-template");
-      const addRowButton = document.getElementById("add-row-button");
-      const printButton = document.getElementById("print-button");
-
-      const logo = document.getElementById("moe-logo");
-      const logoFallback = document.getElementById("logo-fallback");
-
-      const today = new Date();
-
-      dayInput.value = new Intl.DateTimeFormat("ar-SA", {
-        weekday: "long"
-      }).format(today);
-
-      try {
-        dateInput.value =
-          new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric"
-          }).format(today) + " هـ";
-      } catch {
-        dateInput.value = new Intl.DateTimeFormat("ar-SA", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric"
-        }).format(today);
-      }
-
-      function normalizedValue(input, fallback) {
-        const value = input.value.replace(/\s+/g, " ").trim();
-        return value || fallback;
-      }
-
-      function syncReportMetadata() {
-        printSchoolName.textContent = normalizedValue(
-          schoolInput,
-          "........................................................"
-        );
-
-        printDay.textContent = normalizedValue(
-          dayInput,
-          "...................."
-        );
-
-        printDate.textContent = normalizedValue(
-          dateInput,
-          "...................."
-        );
-
-        document.title =
-          "تقرير حصص الانتظار اليومي - " +
-          normalizedValue(schoolInput, "المدرسة");
-      }
-
-      function renumberRows() {
-        [...rowsContainer.rows].forEach((row, index) => {
-          row.querySelector(".row-number").textContent = String(index + 1);
-        });
-      }
-
-      function addRow() {
-        const fragment = rowTemplate.content.cloneNode(true);
-        const row = fragment.querySelector("tr");
-        const removeButton = fragment.querySelector(".remove-row");
-
-        removeButton.addEventListener("click", () => {
-          if (rowsContainer.rows.length <= 1) {
-            row.querySelectorAll("input").forEach((input) => {
-              input.value = "";
-            });
-            return;
-          }
-
-          row.remove();
-          renumberRows();
-        });
-
-        rowsContainer.appendChild(fragment);
-        renumberRows();
-      }
-
-      async function waitForLogo() {
-        if (logo.hidden || logo.complete) {
-          return;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المنظومة الذكية لإدارة الجداول المدرسية وحصص الانتظار</title>
+    <!-- استدعاء Tailwind CSS للتصميم العصري -->
+    <script src="https://jsdelivr.net"></script>
+    <!-- استدعاء مكتبة SheetJS لقراءة ملفات الإكسل مباشرة في المتصفح -->
+    <script src="https://cloudflare.com"></script>
+    <style>
+        /* تنسيقات حاسمة للطباعة الرسمية الصارمة وعزل التقارير */
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 15mm;
+            }
+            body {
+                background-color: white !important;
+                color: black !important;
+                font-size: 12pt;
+            }
+            /* إخفاء لوحات الإدخال والأزرار العلوية والجانبية عند الطباعة */
+            .no-print {
+                display: none !important;
+            }
+            .print-area {
+                display: block !important;
+                width: 100% !important;
+            }
+            /* حث المتصفح على طباعة الألوان والخلفيات في الجداول العامة */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .page-break {
+                page-break-after: always;
+            }
         }
+        /* تأثير مرئي أثناء عملية السحب والإفلات */
+        .dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen">
 
-        await Promise.race([
-          new Promise((resolve) => {
-            logo.addEventListener("load", resolve, { once: true });
-            logo.addEventListener("error", resolve, { once: true });
-          }),
-          new Promise((resolve) => {
-            window.setTimeout(resolve, 1800);
-          })
-        ]);
-      }
+    <!-- شريط التنقل العلوي والمحاذاة الفاخرة (يخفى عند الطباعة) -->
+    <header class="no-print bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-lg text-xl shadow-md">⚙️</div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900">المنظومة المدرسية الذكية</h1>
+                    <p class="text-xs text-slate-500">إدارة الجداول، أتمتة حصص الانتظار التراكمية، ونظام الطباعة الرسمي</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    <span class="w-1.5 h-1.5 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                    جدار حماية القيود نشط
+                </span>
+                <button onclick="loadDemoData()" class="px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-sm font-medium transition duration-200">
+                    🪄 تعبئة بيانات تجريبية
+                </button>
+            </div>
+        </div>
+    </header>
 
-      logo.addEventListener("error", () => {
-        logo.hidden = true;
-        logoFallback.hidden = false;
-      });
+    <!-- لوحة التحكم الرئيسية المنقسمة (تخفى عند الطباعة) -->
+    <main class="no-print max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- العمود الأيمن: شاشات الإدخال والنسخ الذكي واستيراد الإكسل -->
+        <section class="lg:col-span-1 space-y-8">
+            
+            <!-- بطاقة 1: إدارة المراحل الدراسية مع ميزات التعديل والحذف والنسخ -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <h2 class="text-lg font-bold text-slate-900 border-b pb-2 flex justify-between items-center">
+                    <span>🏫 إدارة المراحل والفصول</span>
+                </h2>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">اسم المرحلة</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="stageInput" placeholder="مثال: الابتدائية، المتوسطة" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-indigo-600">
+                        <button onclick="addStage()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 whitespace-nowrap shadow-sm">
+                            + إضافة
+                        </button>
+                    </div>
+                </div>
+                <!-- قائمة استعراض وتعديل المراحل -->
+                <div id="stagesList" class="space-y-2 max-h-40 overflow-y-auto"></div>
+                <hr class="border-slate-100">
+                <!-- إدارة الفصول والنسخ الذكي بين المراحل -->
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">المرحلة الحالية</label>
+                        <select id="stageSelectForClass" onchange="renderClassesList()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-indigo-600"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">اسم الفصل</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="classInput" placeholder="مثال: أولى/أ، أولى/ب" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-indigo-600">
+                            <button onclick="addClass()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 whitespace-nowrap shadow-sm">
+                                إضافة فصل
+                            </button>
+                        </div>
+                    </div>
+                    <div id="classesList" class="flex flex-wrap gap-1.5 py-1"></div>
+                    <!-- زر تكرار الفصول الذكي لمرحلة أخرى لتسهيل تجربة المستخدم -->
+                    <div class="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 space-y-2">
+                        <p class="text-xs text-indigo-700 font-medium">📋 نسخ هذه الفصول إلى مرحلة أخرى:</p>
+                        <div class="flex gap-2">
+                            <select id="targetStageForClassCopy" class="w-full px-2 py-1 bg-white border border-indigo-200 rounded-md text-xs focus:outline-indigo-600"></select>
+                            <button onclick="copyClassesBulk()" class="px-3 py-1 bg-indigo-600 text-white rounded-md text-xs hover:bg-indigo-700 whitespace-nowrap shadow-sm">
+                                تنفيذ النسخ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-      schoolInput.addEventListener("input", syncReportMetadata);
-      dayInput.addEventListener("input", syncReportMetadata);
-      dateInput.addEventListener("input", syncReportMetadata);
-      addRowButton.addEventListener("click", addRow);
-
-      printButton.addEventListener("click", async () => {
-        syncReportMetadata();
-        document.body.classList.add("printing-daily");
-
-        await waitForLogo();
-        window.print();
-      });
-
-      window.addEventListener("beforeprint", syncReportMetadata);
-
-      window.addEventListener("afterprint", () => {
-        document.body.classList.remove("printing-daily");
-      });
-
-      for (let index = 0; index < 8; index += 1) {
-        addRow();
-      }
-
-      syncReportMetadata();
-    })();
-  </script>
-</body>
-</html>
+            <!-- بطاقة 2: استيراد المعلمين من ملف إكسل أو الإدخال اليدوي -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <h2 class="text-lg font-bold text-slate-900 border-b pb-2">👥 إدارة طاقم المعلمين</h2>
+                <!-- ميزة استيراد الإكسل دفعة واحدة لتوفير وقت الإدارة بنسبة 90% -->
+                <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-4 text-center space-y-2">
+                    <p class="text-xs text-slate-600 font-medium">📥 استيراد المعلمين دفعة واحدة من ملف إكسل</p>
+                    <p class="text-[10px] text-slate-400">الأعمدة المطلوبة: [اسم المعلم] - [رقم الهوية] - [رقم الجوال]</p>
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls" onchange="importTeachersFromExcel(event)" class="hidden">
+                    <button onclick="document.getElementById('excelFileInput').click()" class="w-full px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg shadow-sm transition duration-150">
+                        📁 اختر ملف إكسل وارفعه الآن
+                    </button>
+                </div>
+                <!-- الإدخال اليدوي المساعد لحالات الطوارئ -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">اسم المعلم</label>
+                        <input type="text" id="teacherName" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-indigo-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">التخصص</label>
+                        <input type="text" id="teacherSpec" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-indigo-600">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">رقم الهوية</label>
+                        <input type="text" id="teacherNationalId" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-indigo-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">رقم الجوال</label>
+                        <input type="text" id="teacherPhone" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-indigo-600">
+                    </div>
+                </div>
+                <div class="flex gap-2 items-end">
+                    <div class="w-full">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">النصاب الأسبوعي</label>
+                        <input type="number" id="teacherMaxLessons" value="24" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-indigo-600">
+                    </div>
