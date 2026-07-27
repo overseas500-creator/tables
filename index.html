@@ -32,7 +32,23 @@
         @media print {
             @page {
                 size: A4 portrait;
-                margin: 15mm;
+                margin: 15mm 15mm 28mm;
+
+                @bottom-center {
+                    content: "وكيل الشؤون التعليمية / ............................      التوقيع: ............................";
+                    direction: rtl;
+                    width: 180mm;
+                    box-sizing: border-box;
+                    padding-top: 2.5mm;
+                    color: #0f172a;
+                    font-family: Tahoma, Arial, sans-serif;
+                    font-size: 9.5pt;
+                    font-weight: 700;
+                    text-align: right;
+                    vertical-align: middle;
+                    white-space: nowrap;
+                    border-top: 0.25mm dotted #94a3b8;
+                }
             }
         }
     </style>
@@ -1244,13 +1260,12 @@
 
             body.printing-waiting-report #waitingPrintReport {
                 direction: rtl;
-                display: flex !important;
+                display: block !important;
                 width: 100%;
-                min-height: 267mm;
-                flex-direction: column;
                 margin: 0;
                 padding: 0;
-                color: #000;
+                box-sizing: border-box;
+                color: #0f172a;
                 background: #fff;
                 font-family: Tahoma, Arial, sans-serif;
                 -webkit-print-color-adjust: exact;
@@ -1431,11 +1446,11 @@
                 direction: ltr;
                 display: grid;
                 grid-template-columns: 1fr 44mm 1fr;
-                grid-template-areas: "blank logo identity";
+                grid-template-areas: "code logo identity";
                 align-items: start;
                 min-height: 31mm;
                 padding-bottom: 4mm;
-                border-bottom: 0.4mm solid #111;
+                border-bottom: 0.45mm solid #0f766e;
             }
 
             .report-identity {
@@ -1454,26 +1469,26 @@
             .report-logo {
                 grid-area: logo;
                 display: flex;
-                min-height: 27mm;
+                min-height: 13.5mm;
                 align-items: flex-start;
                 justify-content: center;
             }
 
             .report-logo img {
-                width: 39mm;
-                max-height: 27mm;
+                width: 19.5mm;
+                max-height: 13.5mm;
                 object-fit: contain;
             }
 
             .report-logo-fallback {
-                width: 39mm;
-                padding: 5mm 2mm;
+                width: 19.5mm;
+                padding: 2.5mm 1mm;
                 color: #087f75;
                 text-align: center;
-                font-size: 12pt;
+                font-size: 6pt;
                 font-weight: 900;
-                border: 0.4mm solid #087f75;
-                border-radius: 2mm;
+                border: 0.25mm solid #087f75;
+                border-radius: 1mm;
             }
 
             .report-title {
@@ -1484,20 +1499,27 @@
             }
 
             .teacher-report {
-                margin-bottom: 5mm;
+                margin-bottom: 4mm;
                 break-inside: avoid-page;
                 page-break-inside: avoid;
             }
 
             .teacher-report + .teacher-report {
-                margin-top: 2mm;
+                margin-top: 3mm;
+                padding-top: 3mm;
+                border-top: 0.3mm solid #cbd5e1;
             }
 
             .report-preamble {
                 margin: 0 0 2mm;
+                padding: 2mm 2.5mm;
+                color: #164e63;
                 font-size: 8.5pt;
                 font-weight: 700;
-                line-height: 1.7;
+                line-height: 1.65;
+                background: #ecfeff !important;
+                border-right: 1mm solid #14b8a6;
+                border-radius: 1.5mm;
             }
 
             .official-report-table {
@@ -1506,6 +1528,17 @@
                 direction: rtl;
                 border-collapse: collapse;
                 font-size: 8pt;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .official-report-table thead {
+                display: table-header-group;
+            }
+
+            .official-report-table tr {
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
 
             .official-report-table th,
@@ -1514,14 +1547,26 @@
                 padding: 1mm;
                 text-align: center;
                 vertical-align: middle;
-                border: 0.3mm solid #17202a;
+                border: 0.25mm solid #94a3b8;
                 overflow-wrap: anywhere;
             }
 
             .official-report-table th {
                 height: 7mm;
+                color: #fff;
                 font-weight: 700;
-                background: #dfe3e8 !important;
+                background: #155e75 !important;
+            }
+
+            .official-report-table tbody tr:nth-child(even) td {
+                background: #f8fafc !important;
+            }
+
+            .official-report-table tbody td:first-child,
+            .official-report-table tbody tr:nth-child(even) td:first-child {
+                color: #115e59;
+                font-weight: 900;
+                background: #ccfbf1 !important;
             }
 
             .official-report-table th:nth-child(1) {
@@ -1553,25 +1598,12 @@
             }
 
             .report-footer {
-                direction: ltr;
-                display: grid;
-                grid-template-columns: 1fr 2fr;
-                grid-template-areas: "code signature";
-                align-items: end;
-                gap: 8mm;
-                width: 100%;
-                margin-top: auto;
-                padding-top: 7mm;
-                font-size: 9.5pt;
-                font-weight: 700;
-                border-top: 0.25mm dotted #555;
-                break-inside: avoid;
-                page-break-inside: avoid;
+                display: none !important;
             }
 
             .report-signature {
-                grid-area: signature;
                 direction: rtl;
+                width: 100%;
                 text-align: right;
                 white-space: nowrap;
             }
@@ -1582,6 +1614,17 @@
                 text-align: left;
                 font-size: 8pt;
                 white-space: nowrap;
+            }
+
+            .report-code-top {
+                align-self: start;
+                justify-self: start;
+                padding: 1.2mm 1.8mm;
+                color: #164e63;
+                font-weight: 800;
+                background: #f0fdfa !important;
+                border: 0.25mm solid #99f6e4;
+                border-radius: 1.2mm;
             }
         }
     </style>
@@ -2354,7 +2397,7 @@
         aria-label="تقرير حصص الانتظار اليومي"
     >
         <header class="report-header">
-            <div></div>
+            <div class="report-code report-code-top">(و.ت.ع.ن -01-01)</div>
 
             <div class="report-logo">
                 <img
@@ -2381,8 +2424,6 @@
         <div id="printTeacherTables"></div>
 
         <footer class="report-footer">
-            <div class="report-code">(و.ت.ع.ن -01-01)</div>
-
             <div class="report-signature">
                 وكيل الشؤون التعليمية / ............................
                 &nbsp;&nbsp;&nbsp;
@@ -9788,17 +9829,12 @@
                     ? group.rows
                     : [];
 
-                const rowCount = Math.max(
-                    7,
-                    sourceRows.length
-                );
-
                 for (
                     let index = 0;
-                    index < rowCount;
+                    index < sourceRows.length;
                     index += 1
                 ) {
-                    const source = sourceRows[index] || {};
+                    const source = sourceRows[index];
                     const row = document.createElement("tr");
 
                     REPORT_COLUMNS.forEach(([key]) => {
