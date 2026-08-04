@@ -581,6 +581,25 @@
             font-size: 13px;
         }
 
+        .data-item-title {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .waiting-exclusion-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            color: #9a3412;
+            font-size: 10px;
+            font-weight: 900;
+            border: 1px solid #fed7aa;
+            border-radius: 999px;
+            background: #fff7ed;
+        }
+
         .data-item small {
             display: block;
             margin-top: 4px;
@@ -1153,6 +1172,15 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+
+        .teacher-waiting-option {
+            min-height: 48px;
+            background: #f8fafc;
+        }
+
+        .teacher-waiting-option span {
+            white-space: normal;
         }
 
         .general-report-actions {
@@ -2195,6 +2223,21 @@
                                     </button>
                                 </div>
                             </div>
+
+                            <div class="field full">
+                                <label
+                                    class="report-check-option teacher-waiting-option"
+                                    for="teacherExcludeWaitingInput"
+                                >
+                                    <input
+                                        id="teacherExcludeWaitingInput"
+                                        type="checkbox"
+                                    >
+                                    <span>
+                                        استثناء هذا المعلم من إسناد حصص الانتظار
+                                    </span>
+                                </label>
+                            </div>
                         </form>
 
                         <div class="excel-box">
@@ -2803,7 +2846,7 @@
 
             function defaultState() {
                 return {
-                    version: 6,
+                    version: 7,
 
                     school: {
                         name: "اسم المدرسة",
@@ -2875,7 +2918,8 @@
                             nationalId: "1000000001",
                             phone: "0500000001",
                             specialization: "لغة عربية",
-                            maxLessons: 24
+                            maxLessons: 24,
+                            excludeFromWaiting: false
                         },
                         {
                             id: "teacher-2",
@@ -2883,7 +2927,8 @@
                             nationalId: "1000000002",
                             phone: "0500000002",
                             specialization: "رياضيات",
-                            maxLessons: 24
+                            maxLessons: 24,
+                            excludeFromWaiting: false
                         },
                         {
                             id: "teacher-3",
@@ -2891,7 +2936,8 @@
                             nationalId: "1000000003",
                             phone: "0500000003",
                             specialization: "علوم",
-                            maxLessons: 24
+                            maxLessons: 24,
+                            excludeFromWaiting: false
                         },
                         {
                             id: "teacher-4",
@@ -2899,7 +2945,8 @@
                             nationalId: "1000000004",
                             phone: "0500000004",
                             specialization: "تربية فنية",
-                            maxLessons: 20
+                            maxLessons: 20,
+                            excludeFromWaiting: false
                         }
                     ],
 
@@ -3145,7 +3192,7 @@
                 }
 
                 const hydrated = {
-                    version: 6,
+                    version: 7,
                     school: {
                         ...fallback.school,
                         ...(raw.school || {})
@@ -3159,9 +3206,15 @@
                     subjects: Array.isArray(raw.subjects)
                         ? raw.subjects
                         : fallback.subjects,
-                    teachers: Array.isArray(raw.teachers)
-                        ? raw.teachers
-                        : fallback.teachers,
+                    teachers: (
+                        Array.isArray(raw.teachers)
+                            ? raw.teachers
+                            : fallback.teachers
+                    ).map((teacher) => ({
+                        ...teacher,
+                        excludeFromWaiting:
+                            teacher?.excludeFromWaiting === true
+                    })),
                     teachingAssignments: Array.isArray(
                         raw.teachingAssignments
                     )
@@ -5084,7 +5137,14 @@
                     .map((teacher) => `
                         <div class="data-item">
                             <div>
-                                <strong>${escapeHTML(teacher.name)}</strong>
+                                <div class="data-item-title">
+                                    <strong>${escapeHTML(teacher.name)}</strong>
+                                    ${
+                                        teacher.excludeFromWaiting
+                                            ? '<span class="waiting-exclusion-badge">مستثنى من الانتظار</span>'
+                                            : ""
+                                    }
+                                </div>
                                 <small>
                                     الهوية: ${escapeHTML(teacher.nationalId)}
                                     — الجوال: ${escapeHTML(teacher.phone)}
@@ -5423,6 +5483,20 @@
                         </tr>
                     `;
                 }).join("");
+            }
+
+            function invalidateWaitingReport() {
+                lastWaitingReport = null;
+
+                const container = $("#waitingResults");
+
+                if (container) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            اضغط «إنشاء توزيع الانتظار» لتحديث الإسناد.
+                        </div>
+                    `;
+                }
             }
 
             function renderAbsentTeacherChips() {
@@ -5926,6 +6000,7 @@
                 $("#teacherPhoneInput").value = "";
                 $("#teacherSpecializationInput").value = "";
                 $("#teacherMaxLessonsInput").value = "24";
+                $("#teacherExcludeWaitingInput").checked = false;
                 $("#saveTeacherButton").textContent = "إضافة المعلم";
             }
 
@@ -6128,6 +6203,9 @@
                 const specialization =
                     $("#teacherSpecializationInput").value.trim();
 
+                const excludeFromWaiting =
+                    $("#teacherExcludeWaitingInput").checked;
+
                 const maxLessons = Math.min(
                     DAYS.length * MAX_TEACHER_DAILY_PERIODS,
                     Math.max(
@@ -6191,7 +6269,8 @@
                         nationalId,
                         phone,
                         specialization,
-                        maxLessons
+                        maxLessons,
+                        excludeFromWaiting
                     });
                 } else {
                     state.teachers.push({
@@ -6200,11 +6279,13 @@
                         nationalId,
                         phone,
                         specialization,
-                        maxLessons
+                        maxLessons,
+                        excludeFromWaiting
                     });
                 }
 
                 resetTeacherEditor();
+                invalidateWaitingReport();
                 saveState();
                 renderAll();
                 showToast("تم حفظ بيانات المعلم.");
@@ -6507,6 +6588,9 @@
                         $("#teacherMaxLessonsInput").value =
                             Number(teacher.maxLessons || 24);
 
+                        $("#teacherExcludeWaitingInput").checked =
+                            teacher.excludeFromWaiting === true;
+
                         $("#saveTeacherButton").textContent =
                             "حفظ التعديل";
                     }
@@ -6649,6 +6733,8 @@
                         selectedAbsentTeacherIds.filter(
                             (teacherId) => teacherId !== id
                         );
+
+                    invalidateWaitingReport();
                 }
 
                 if (entity === "assignment") {
@@ -6917,13 +7003,15 @@
                                     nationalId,
                                     phone,
                                     specialization: "",
-                                    maxLessons: 24
+                                    maxLessons: 24,
+                                    excludeFromWaiting: false
                                 });
 
                                 added += 1;
                             }
                         });
 
+                        invalidateWaitingReport();
                         saveState();
                         renderAll();
 
@@ -9030,6 +9118,8 @@
                                         state.teachers
                                             .filter(
                                                 (teacher) =>
+                                                    teacher.excludeFromWaiting !==
+                                                        true &&
                                                     !absentSet.has(
                                                         teacher.id
                                                     ) &&
