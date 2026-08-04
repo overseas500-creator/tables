@@ -98,6 +98,112 @@
                 #f5f7fb;
         }
 
+        body.auth-pending #loginScreen,
+        body.auth-pending #application {
+            visibility: hidden;
+        }
+
+        .login-screen {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .login-card {
+            width: min(100%, 460px);
+            padding: clamp(26px, 5vw, 42px);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            border-radius: 28px;
+            background: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 28px 70px rgba(15, 23, 42, 0.18);
+            backdrop-filter: blur(14px);
+        }
+
+        .login-mark {
+            width: 64px;
+            height: 64px;
+            display: grid;
+            place-items: center;
+            margin-bottom: 20px;
+            color: #fff;
+            font-size: 30px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #0f766e, #14b8a6);
+            box-shadow: 0 16px 30px rgba(15, 118, 110, 0.24);
+        }
+
+        .login-card h1 {
+            margin: 0;
+            color: var(--brand-dark);
+            font-size: clamp(1.65rem, 5vw, 2.15rem);
+            font-weight: 900;
+        }
+
+        .login-card > p {
+            margin: 12px 0 24px;
+            color: var(--muted);
+            line-height: 1.8;
+        }
+
+        .login-form {
+            display: grid;
+            gap: 12px;
+        }
+
+        .login-form label {
+            font-weight: 900;
+        }
+
+        .login-phone {
+            min-height: 54px;
+            width: 100%;
+            padding: 12px 16px;
+            direction: ltr;
+            color: var(--ink);
+            text-align: left;
+            font-size: 1.08rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            outline: none;
+            background: #fff;
+            transition: border-color 150ms ease, box-shadow 150ms ease;
+        }
+
+        .login-phone:focus {
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.13);
+        }
+
+        .login-error {
+            min-height: 22px;
+            margin: 0;
+            color: var(--danger);
+            font-size: 0.88rem;
+            font-weight: 800;
+        }
+
+        .login-submit {
+            width: 100%;
+            min-height: 52px;
+            margin-top: 2px;
+        }
+
+        .login-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            margin: 20px 0 0 !important;
+            padding: 12px 14px;
+            color: #475569 !important;
+            font-size: 0.82rem;
+            line-height: 1.7 !important;
+            border-radius: 13px;
+            background: #f8fafc;
+        }
+
         button,
         input,
         select {
@@ -136,6 +242,67 @@
             align-items: center;
             justify-content: space-between;
             gap: 24px;
+        }
+
+        .account-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 18px;
+            padding: 11px 13px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.09);
+        }
+
+        .account-identity {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+        }
+
+        .account-icon {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            flex: 0 0 auto;
+            place-items: center;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        .account-copy {
+            display: grid;
+            gap: 2px;
+        }
+
+        .account-copy span {
+            color: #a7f3d0;
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+
+        .account-copy strong {
+            direction: ltr;
+            color: #fff;
+            text-align: right;
+            font-size: 0.98rem;
+            letter-spacing: 0.04em;
+        }
+
+        .account-logout {
+            min-height: 38px;
+            padding: 8px 13px;
+            color: #fff;
+            font-weight: 900;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 11px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .account-logout:hover {
+            background: rgba(255, 255, 255, 0.17);
         }
 
         .hero h1 {
@@ -1228,6 +1395,19 @@
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
+            .login-screen {
+                padding: 14px;
+            }
+
+            .account-bar {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .account-logout {
+                width: 100%;
+            }
+
             .waiting-row {
                 grid-template-columns: 55px 1fr;
             }
@@ -1247,6 +1427,11 @@
         }
 
         @media print {
+            .login-screen,
+            .account-bar {
+                display: none !important;
+            }
+
             html,
             body {
                 margin: 0 !important;
@@ -1630,14 +1815,70 @@
     </style>
 </head>
 
-<body>
+<body class="auth-pending">
     <div id="toast" class="toast" role="alert" aria-live="assertive">
         <strong id="toastTitle">تم</strong>
         <p id="toastMessage"></p>
     </div>
 
-    <div id="application" class="app-shell">
+    <section
+        id="loginScreen"
+        class="login-screen"
+        aria-labelledby="loginTitle"
+    >
+        <div class="login-card">
+            <div class="login-mark" aria-hidden="true">👤</div>
+            <h1 id="loginTitle">دخول المستخدم</h1>
+            <p>
+                أدخل رقم الجوال المكوّن من 10 أرقام. إذا كان الرقم جديدًا
+                فسيُنشأ له حساب مستقل تلقائيًا على هذا المتصفح.
+            </p>
+
+            <form id="loginForm" class="login-form" novalidate>
+                <label for="loginPhoneInput">رقم الجوال</label>
+                <input
+                    id="loginPhoneInput"
+                    class="login-phone"
+                    type="tel"
+                    inputmode="numeric"
+                    autocomplete="tel"
+                    maxlength="10"
+                    placeholder="05xxxxxxxx"
+                    aria-describedby="loginError"
+                    required
+                >
+                <p id="loginError" class="login-error" role="alert" aria-live="assertive"></p>
+                <button class="btn btn-primary login-submit" type="submit">
+                    دخول أو إنشاء حساب
+                </button>
+            </form>
+
+            <p class="login-note">
+                <span aria-hidden="true">ℹ️</span>
+                <span>
+                    لا يُرسل رمز تحقق. بيانات كل رقم منفصلة على هذا الجهاز،
+                    لكن معرفة الرقم تسمح بالدخول إليه من المتصفح نفسه.
+                </span>
+            </p>
+        </div>
+    </section>
+
+    <div id="application" class="app-shell" hidden>
         <header class="hero">
+            <div id="accountBar" class="account-bar">
+                <div class="account-identity">
+                    <span class="account-icon" aria-hidden="true">👤</span>
+                    <div class="account-copy">
+                        <span>الحساب الحالي</span>
+                        <strong id="currentUserPhone">—</strong>
+                    </div>
+                </div>
+
+                <button id="logoutButton" type="button" class="account-logout">
+                    تسجيل الخروج
+                </button>
+            </div>
+
             <div class="hero-layout">
                 <div>
                     <span class="hero-badge">الحفظ المحلي مفعل</span>
@@ -2437,6 +2678,12 @@
             "use strict";
 
             const STORAGE_KEY = "smart-school-system-v4";
+            const USER_STORAGE_PREFIX =
+                `${STORAGE_KEY}:user:`;
+            const ACTIVE_USER_SESSION_KEY =
+                "smart-school-active-user-v1";
+            const LEGACY_OWNER_KEY =
+                `${STORAGE_KEY}:legacy-owner`;
             const DUPLICATE_MESSAGE =
                 "لا يسمح بتكرار المادة في اليوم نفسه إلا لمادة ذات 6 حصص، وبحد حصة ثانية في يوم واحد فقط.";
 
@@ -2455,6 +2702,44 @@
             const AUTO_SEARCH_TIME_LIMIT_MS = 3000;
 
             const $ = (selector) => document.querySelector(selector);
+
+            function normalizePhoneDigits(value) {
+                return String(value ?? "")
+                    .replace(/[٠-٩]/g, (digit) =>
+                        String(digit.charCodeAt(0) - 0x0660)
+                    )
+                    .replace(/[۰-۹]/g, (digit) =>
+                        String(digit.charCodeAt(0) - 0x06f0)
+                    )
+                    .replace(/\D/g, "");
+            }
+
+            function normalizeUserPhone(value) {
+                const digits = normalizePhoneDigits(value);
+
+                return /^\d{10}$/.test(digits)
+                    ? digits
+                    : "";
+            }
+
+            function userStateStorageKey(phone) {
+                return `${USER_STORAGE_PREFIX}${phone}`;
+            }
+
+            function readActiveUserPhone() {
+                try {
+                    return normalizeUserPhone(
+                        sessionStorage.getItem(
+                            ACTIVE_USER_SESSION_KEY
+                        )
+                    );
+                } catch {
+                    return "";
+                }
+            }
+
+            const currentUserPhone =
+                readActiveUserPhone();
 
             function uid(prefix) {
                 const value =
@@ -2979,7 +3264,46 @@
 
             function loadState() {
                 try {
-                    const stored = localStorage.getItem(STORAGE_KEY);
+                    if (!currentUserPhone) {
+                        return defaultState();
+                    }
+
+                    const userKey = userStateStorageKey(
+                        currentUserPhone
+                    );
+
+                    let stored = localStorage.getItem(userKey);
+                    const legacyState =
+                        localStorage.getItem(STORAGE_KEY);
+
+                    let legacyOwner =
+                        normalizeUserPhone(
+                            localStorage.getItem(
+                                LEGACY_OWNER_KEY
+                            )
+                        );
+
+                    if (legacyState && !legacyOwner) {
+                        localStorage.setItem(
+                            LEGACY_OWNER_KEY,
+                            currentUserPhone
+                        );
+
+                        legacyOwner = currentUserPhone;
+                    }
+
+                    if (
+                        legacyState &&
+                        legacyOwner === currentUserPhone &&
+                        !stored
+                    ) {
+                        localStorage.setItem(
+                            userKey,
+                            legacyState
+                        );
+
+                        stored = legacyState;
+                    }
 
                     return stored
                         ? hydrateState(JSON.parse(stored))
@@ -3167,15 +3491,21 @@
 
             function saveState() {
                 try {
+                    if (!currentUserPhone) {
+                        return;
+                    }
+
                     invalidateStaleScheduleApproval(state);
 
                     localStorage.setItem(
-                        STORAGE_KEY,
+                        userStateStorageKey(
+                            currentUserPhone
+                        ),
                         JSON.stringify(state)
                     );
                 } catch {
                     showToast(
-                        "تعذر حفظ البيانات محلياً في هذا المتصفح.",
+                        "تعذر حفظ بيانات هذا الحساب محلياً في المتصفح.",
                         "error"
                     );
                 }
@@ -3199,6 +3529,106 @@
                     toast.classList.remove("show");
                 }, 3600);
             }
+
+            function initializeAccountInterface() {
+                const signedIn = Boolean(currentUserPhone);
+                const loginScreen = $("#loginScreen");
+                const application = $("#application");
+
+                loginScreen.hidden = signedIn;
+                application.hidden = !signedIn;
+
+                if (signedIn) {
+                    $("#currentUserPhone").textContent =
+                        currentUserPhone;
+                }
+
+                document.body.classList.remove(
+                    "auth-pending"
+                );
+
+                if (!signedIn) {
+                    requestAnimationFrame(() =>
+                        $("#loginPhoneInput").focus()
+                    );
+                }
+            }
+
+            $("#loginPhoneInput").addEventListener(
+                "input",
+                (event) => {
+                    event.target.value =
+                        normalizePhoneDigits(
+                            event.target.value
+                        );
+
+                    $("#loginError").textContent = "";
+                }
+            );
+
+            $("#loginForm").addEventListener(
+                "submit",
+                (event) => {
+                    event.preventDefault();
+
+                    const phone = normalizeUserPhone(
+                        $("#loginPhoneInput").value
+                    );
+
+                    if (!phone) {
+                        $("#loginError").textContent =
+                            "أدخل رقم جوال صحيحاً مكوّناً من 10 أرقام.";
+
+                        $("#loginPhoneInput").focus();
+                        return;
+                    }
+
+                    try {
+                        sessionStorage.setItem(
+                            ACTIVE_USER_SESSION_KEY,
+                            phone
+                        );
+
+                        const submitButton =
+                            event.submitter ||
+                            $(
+                                "#loginForm button[type='submit']"
+                            );
+
+                        submitButton.disabled = true;
+                        document.body.classList.add(
+                            "auth-pending"
+                        );
+                        window.location.reload();
+                    } catch {
+                        $("#loginError").textContent =
+                            "تعذر بدء جلسة المستخدم في هذا المتصفح.";
+                    }
+                }
+            );
+
+            $("#logoutButton").addEventListener(
+                "click",
+                () => {
+                    saveState();
+
+                    try {
+                        sessionStorage.removeItem(
+                            ACTIVE_USER_SESSION_KEY
+                        );
+
+                        document.body.classList.add(
+                            "auth-pending"
+                        );
+                        window.location.reload();
+                    } catch {
+                        showToast(
+                            "تعذر تسجيل الخروج من هذا المتصفح.",
+                            "error"
+                        );
+                    }
+                }
+            );
 
             function showPlacementError(plan) {
                 if (plan.message === DUPLICATE_MESSAGE) {
@@ -10016,7 +10446,12 @@
                 }
             );
 
-            renderAll();
+            initializeAccountInterface();
+
+            if (currentUserPhone) {
+                saveState();
+                renderAll();
+            }
         })();
     </script>
 </body>
