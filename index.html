@@ -15,6 +15,9 @@
     <!-- إنشاء ملفات Excel منسقة بالألوان -->
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 
+    <!-- المصادقة والحفظ السحابي -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.8"></script>
+
     <style type="text/tailwindcss">
         @theme {
             --font-sans: Tahoma, Arial, sans-serif;
@@ -151,6 +154,32 @@
             gap: 12px;
         }
 
+        .login-mode-tabs {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            margin-bottom: 18px;
+            padding: 5px;
+            border: 1px solid #dbe5ec;
+            border-radius: 15px;
+            background: #f1f5f9;
+        }
+
+        .login-mode-button {
+            min-height: 42px;
+            color: #475569;
+            font-weight: 900;
+            border: 0;
+            border-radius: 11px;
+            background: transparent;
+        }
+
+        .login-mode-button.active {
+            color: #fff;
+            background: linear-gradient(135deg, #0f766e, #14b8a6);
+            box-shadow: 0 8px 18px rgba(15, 118, 110, 0.2);
+        }
+
         .login-form label {
             font-weight: 900;
         }
@@ -175,6 +204,15 @@
         .login-phone:focus {
             border-color: #14b8a6;
             box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.13);
+        }
+
+        .login-confirm-field {
+            display: grid;
+            gap: 12px;
+        }
+
+        .login-confirm-field[hidden] {
+            display: none;
         }
 
         .login-error {
@@ -303,6 +341,43 @@
 
         .account-logout:hover {
             background: rgba(255, 255, 255, 0.17);
+        }
+
+        .account-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .account-conflict-action {
+            min-height: 38px;
+            padding: 8px 13px;
+            color: #7f1d1d;
+            font-weight: 900;
+            border: 1px solid #fecaca;
+            border-radius: 11px;
+            background: #fef2f2;
+        }
+
+        .account-conflict-action:hover {
+            background: #fee2e2;
+        }
+
+        .account-sync {
+            display: block;
+            margin-top: 3px;
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .account-sync[data-state="synced"] {
+            color: #a7f3d0;
+        }
+
+        .account-sync[data-state="error"],
+        .account-sync[data-state="conflict"] {
+            color: #fecaca;
         }
 
         .hero h1 {
@@ -1436,6 +1511,15 @@
                 width: 100%;
             }
 
+            .account-actions {
+                width: 100%;
+                flex-direction: column;
+            }
+
+            .account-actions > button {
+                width: 100%;
+            }
+
             .waiting-row {
                 grid-template-columns: 55px 1fr;
             }
@@ -1858,9 +1942,27 @@
             <div class="login-mark" aria-hidden="true">👤</div>
             <h1 id="loginTitle">دخول المستخدم</h1>
             <p>
-                أدخل رقم الجوال المكوّن من 10 أرقام. إذا كان الرقم جديدًا
-                فسيُنشأ له حساب مستقل تلقائيًا على هذا المتصفح.
+                استخدم رقم الجوال المكوّن من 10 أرقام وكلمة المرور للوصول
+                إلى بياناتك المحفوظة سحابيًا من أي جهاز.
             </p>
+
+            <div class="login-mode-tabs" role="tablist" aria-label="نوع العملية">
+                <button
+                    id="loginModeButton"
+                    class="login-mode-button active"
+                    type="button"
+                    role="tab"
+                    aria-selected="true"
+                >تسجيل الدخول</button>
+
+                <button
+                    id="registerModeButton"
+                    class="login-mode-button"
+                    type="button"
+                    role="tab"
+                    aria-selected="false"
+                >إنشاء حساب</button>
+            </div>
 
             <form id="loginForm" class="login-form" novalidate>
                 <label for="loginPhoneInput">رقم الجوال</label>
@@ -1875,17 +1977,46 @@
                     aria-describedby="loginError"
                     required
                 >
+
+                <label for="loginPasswordInput">كلمة المرور</label>
+                <input
+                    id="loginPasswordInput"
+                    class="login-phone"
+                    type="password"
+                    autocomplete="current-password"
+                    minlength="8"
+                    maxlength="72"
+                    placeholder="8 أحرف على الأقل"
+                    aria-describedby="loginError"
+                    required
+                >
+
+                <div id="loginConfirmField" class="login-confirm-field" hidden>
+                    <label for="loginPasswordConfirmInput">تأكيد كلمة المرور</label>
+                    <input
+                        id="loginPasswordConfirmInput"
+                        class="login-phone"
+                        type="password"
+                        autocomplete="new-password"
+                        minlength="8"
+                        maxlength="72"
+                        placeholder="أعد كتابة كلمة المرور"
+                        aria-describedby="loginError"
+                    >
+                </div>
+
                 <p id="loginError" class="login-error" role="alert" aria-live="assertive"></p>
-                <button class="btn btn-primary login-submit" type="submit">
-                    دخول أو إنشاء حساب
+                <button id="loginSubmitButton" class="btn btn-primary login-submit" type="submit">
+                    تسجيل الدخول
                 </button>
             </form>
 
             <p class="login-note">
                 <span aria-hidden="true">ℹ️</span>
                 <span>
-                    لا يُرسل رمز تحقق. بيانات كل رقم منفصلة على هذا الجهاز،
-                    لكن معرفة الرقم تسمح بالدخول إليه من المتصفح نفسه.
+                    لا يُرسل رمز تحقق. لا تحفظ المنظومة كلمة المرور داخل
+                    بيانات الجدول أو النسخة الاحتياطية. احتفظ بكلمة المرور؛
+                    لا تتوفر استعادة تلقائية لها حالياً.
                 </span>
             </p>
         </div>
@@ -1899,17 +2030,29 @@
                     <div class="account-copy">
                         <span>الحساب الحالي</span>
                         <strong id="currentUserPhone">—</strong>
+                        <small id="cloudSyncStatus" class="account-sync" data-state="pending">
+                            جارٍ التحقق من المزامنة
+                        </small>
                     </div>
                 </div>
 
-                <button id="logoutButton" type="button" class="account-logout">
-                    تسجيل الخروج
-                </button>
+                <div class="account-actions">
+                    <button
+                        id="cloudConflictRetryButton"
+                        type="button"
+                        class="account-conflict-action"
+                        hidden
+                    >إعادة محاولة حفظ مسودتي</button>
+
+                    <button id="logoutButton" type="button" class="account-logout">
+                        تسجيل الخروج
+                    </button>
+                </div>
             </div>
 
             <div class="hero-layout">
                 <div>
-                    <span class="hero-badge">الحفظ المحلي مفعل</span>
+                    <span id="storageModeBadge" class="hero-badge">جارٍ الاتصال بالسحابة</span>
                     <h1>المنظومة المدرسية الذكية</h1>
                     <p>
                         إدارة المراحل والفصول والمواد والمعلمين، وبناء الجدول بالسحب الذكي،
@@ -2727,6 +2870,21 @@
                 "smart-school-active-user-v1";
             const LEGACY_OWNER_KEY =
                 `${STORAGE_KEY}:legacy-owner`;
+            const SUPABASE_URL =
+                "https://psgqorkqoqcbuqrhqigr.supabase.co";
+            const SUPABASE_PUBLISHABLE_KEY =
+                "sb_publishable_4OcbUKpBob8SzDidP1nXXw_oJKHMEKa";
+            const CLOUD_STATE_TABLE = "user_app_state";
+            const AUTH_EMAIL_DOMAIN =
+                "psgqorkqoqcbuqrhqigr.supabase.co";
+            const AUTH_EMAIL_PREFIX = "phone-";
+            const CLOUD_PENDING_PREFIX =
+                `${STORAGE_KEY}:cloud-pending:`;
+            const CLOUD_LOCAL_PREFIX =
+                `${STORAGE_KEY}:cloud-user:`;
+            const SUPABASE_AUTH_STORAGE_KEY =
+                `${STORAGE_KEY}:supabase-auth`;
+            const CLOUD_SAVE_DELAY_MS = 650;
             const DUPLICATE_MESSAGE =
                 "لا يسمح بتكرار المادة في اليوم نفسه إلا لمادة ذات 6 حصص، وبحد حصة ثانية في يوم واحد فقط.";
 
@@ -2746,6 +2904,33 @@
 
             const $ = (selector) => document.querySelector(selector);
 
+            function createCloudClient() {
+                try {
+                    if (!window.supabase?.createClient) {
+                        return null;
+                    }
+
+                    return window.supabase.createClient(
+                        SUPABASE_URL,
+                        SUPABASE_PUBLISHABLE_KEY,
+                        {
+                            auth: {
+                                storage: window.sessionStorage,
+                                storageKey:
+                                    SUPABASE_AUTH_STORAGE_KEY,
+                                persistSession: true,
+                                autoRefreshToken: true,
+                                detectSessionInUrl: false
+                            }
+                        }
+                    );
+                } catch {
+                    return null;
+                }
+            }
+
+            const cloudClient = createCloudClient();
+
             function normalizePhoneDigits(value) {
                 return String(value ?? "")
                     .replace(/[٠-٩]/g, (digit) =>
@@ -2760,13 +2945,95 @@
             function normalizeUserPhone(value) {
                 const digits = normalizePhoneDigits(value);
 
-                return /^\d{10}$/.test(digits)
+                return /^05\d{8}$/.test(digits)
                     ? digits
                     : "";
             }
 
+            function phoneToInternational(phone) {
+                const normalized = normalizeUserPhone(phone);
+
+                return normalized
+                    ? `+966${normalized.slice(1)}`
+                    : "";
+            }
+
+            function phoneFromInternational(value) {
+                const digits = normalizePhoneDigits(value);
+
+                if (/^9665\d{8}$/.test(digits)) {
+                    return `0${digits.slice(3)}`;
+                }
+
+                return normalizeUserPhone(value);
+            }
+
+            function phoneToAuthEmail(value) {
+                const phone = normalizeUserPhone(value);
+
+                return phone
+                    ? `${AUTH_EMAIL_PREFIX}${phone}@${AUTH_EMAIL_DOMAIN}`
+                    : "";
+            }
+
+            function phoneFromAuthEmail(value) {
+                const email = String(value ?? "")
+                    .trim()
+                    .toLowerCase();
+                const suffix = `@${AUTH_EMAIL_DOMAIN}`;
+
+                if (
+                    !email.startsWith(AUTH_EMAIL_PREFIX) ||
+                    !email.endsWith(suffix)
+                ) {
+                    return "";
+                }
+
+                return normalizeUserPhone(
+                    email.slice(
+                        AUTH_EMAIL_PREFIX.length,
+                        -suffix.length
+                    )
+                );
+            }
+
+            function phoneFromAuthUser(user) {
+                return (
+                    phoneFromAuthEmail(user?.email) ||
+                    phoneFromInternational(user?.phone)
+                );
+            }
+
+            function createClientId() {
+                return (
+                    typeof crypto !== "undefined" && crypto.randomUUID
+                        ? crypto.randomUUID()
+                        : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+                              /[xy]/g,
+                              (character) => {
+                                  const random = Math.floor(
+                                      Math.random() * 16
+                                  );
+
+                                  const value =
+                                      character === "x"
+                                          ? random
+                                          : (random & 0x3) | 0x8;
+
+                                  return value.toString(16);
+                              }
+                          )
+                );
+            }
+
+            const cloudClientId = createClientId();
+
             function userStateStorageKey(phone) {
                 return `${USER_STORAGE_PREFIX}${phone}`;
+            }
+
+            function cloudLocalStateStorageKey(userId) {
+                return `${CLOUD_LOCAL_PREFIX}${userId}`;
             }
 
             function readActiveUserPhone() {
@@ -2781,8 +3048,20 @@
                 }
             }
 
-            const currentUserPhone =
+            let currentUserPhone =
                 readActiveUserPhone();
+            let currentUserId = "";
+            let authEpoch = 0;
+            let cloudRevision = 0;
+            let cloudReady = false;
+            let cloudDirty = false;
+            let cloudConflict = false;
+            let cloudSaveTimer = null;
+            let cloudSaveInFlight = false;
+            let cloudSaveQueued = false;
+            let cloudSaveGeneration = 0;
+            let cloudChannel = null;
+            let authMode = "login";
 
             function uid(prefix) {
                 const value =
@@ -3542,26 +3821,511 @@
                 assignment: null
             };
 
-            function saveState() {
+            function resetTransientState() {
+                activeClassId = state.classes[0]?.id || "";
+                selectedAbsentTeacherIds = [];
+                currentPlacement = null;
+                activeDrag = null;
+                lastWaitingReport = null;
+                selectedScheduleReportTeacherIds = new Set(
+                    state.teachers.map((teacher) => teacher.id)
+                );
+                selectedScheduleReportClassIds = new Set(
+                    state.classes.map((schoolClass) => schoolClass.id)
+                );
+
+                Object.keys(editing).forEach((key) => {
+                    editing[key] = null;
+                });
+            }
+
+            function setCloudStatus(message, status = "pending") {
+                const statusElement = $("#cloudSyncStatus");
+                const badge = $("#storageModeBadge");
+                const retryButton = $(
+                    "#cloudConflictRetryButton"
+                );
+
+                if (statusElement) {
+                    statusElement.textContent = message;
+                    statusElement.dataset.state = status;
+                }
+
+                if (badge) {
+                    const labels = {
+                        synced: "الحفظ السحابي مفعل",
+                        saving: "جارٍ الحفظ السحابي",
+                        pending: "تغييرات بانتظار المزامنة",
+                        error: "الحفظ المحلي الاحتياطي مفعل",
+                        conflict: "تعارض في المزامنة"
+                    };
+
+                    badge.textContent =
+                        labels[status] || "جارٍ الاتصال بالسحابة";
+                }
+
+                if (retryButton) {
+                    retryButton.hidden = !(
+                        status === "conflict" &&
+                        currentUserId &&
+                        readPendingCloudDraft(currentUserId)
+                    );
+                }
+            }
+
+            function loadAuthenticatedLocalState() {
+                if (!currentUserId) {
+                    return loadState();
+                }
+
+                try {
+                    const stored = localStorage.getItem(
+                        cloudLocalStateStorageKey(currentUserId)
+                    );
+
+                    if (stored) {
+                        return hydrateState(JSON.parse(stored));
+                    }
+                } catch {
+                    // Fall through to the legacy per-phone copy.
+                }
+
+                return loadState();
+            }
+
+            function persistLocalState() {
                 try {
                     if (!currentUserPhone) {
-                        return;
+                        return false;
                     }
 
                     invalidateStaleScheduleApproval(state);
 
                     localStorage.setItem(
-                        userStateStorageKey(
-                            currentUserPhone
-                        ),
+                        currentUserId
+                            ? cloudLocalStateStorageKey(
+                                  currentUserId
+                              )
+                            : userStateStorageKey(
+                                  currentUserPhone
+                              ),
                         JSON.stringify(state)
                     );
+
+                    return true;
                 } catch {
                     showToast(
                         "تعذر حفظ بيانات هذا الحساب محلياً في المتصفح.",
                         "error"
                     );
+
+                    return false;
                 }
+            }
+
+            function cleanupLegacyPhoneState() {
+                if (!currentUserId || !currentUserPhone) {
+                    return;
+                }
+
+                try {
+                    localStorage.removeItem(
+                        userStateStorageKey(currentUserPhone)
+                    );
+
+                    const legacyOwner = normalizeUserPhone(
+                        localStorage.getItem(LEGACY_OWNER_KEY)
+                    );
+
+                    if (legacyOwner === currentUserPhone) {
+                        localStorage.removeItem(STORAGE_KEY);
+                        localStorage.removeItem(LEGACY_OWNER_KEY);
+                    }
+                } catch {
+                    // The verified UUID-scoped local copy remains available.
+                }
+            }
+
+            function pendingCloudStorageKey(userId) {
+                return `${CLOUD_PENDING_PREFIX}${userId}`;
+            }
+
+            function readPendingCloudDraft(userId) {
+                try {
+                    const raw = localStorage.getItem(
+                        pendingCloudStorageKey(userId)
+                    );
+
+                    if (!raw) {
+                        return null;
+                    }
+
+                    const draft = JSON.parse(raw);
+
+                    return draft?.userId === userId && draft?.state
+                        ? draft
+                        : null;
+                } catch {
+                    return null;
+                }
+            }
+
+            function writePendingCloudDraft(
+                snapshot = state,
+                baseRevisionOverride = null
+            ) {
+                if (!currentUserId) {
+                    return;
+                }
+
+                try {
+                    const existing =
+                        readPendingCloudDraft(currentUserId);
+                    const hasOverride =
+                        baseRevisionOverride !== null &&
+                        baseRevisionOverride !== undefined;
+                    const requestedBaseRevision = hasOverride
+                        ? Number(baseRevisionOverride)
+                        : cloudConflict && existing
+                          ? Number(existing.baseRevision || 0)
+                          : cloudRevision;
+                    const baseRevision =
+                        Number.isInteger(requestedBaseRevision) &&
+                        requestedBaseRevision >= 0
+                            ? requestedBaseRevision
+                            : Math.max(
+                                  0,
+                                  Number(cloudRevision) || 0
+                              );
+
+                    localStorage.setItem(
+                        pendingCloudStorageKey(currentUserId),
+                        JSON.stringify({
+                            userId: currentUserId,
+                            baseRevision,
+                            generation: cloudSaveGeneration,
+                            state: snapshot,
+                            savedLocallyAt: new Date().toISOString()
+                        })
+                    );
+                } catch {
+                    // The ordinary per-phone local backup remains available.
+                }
+            }
+
+            function clearPendingCloudDraft(userId = currentUserId) {
+                if (!userId) {
+                    return;
+                }
+
+                try {
+                    localStorage.removeItem(
+                        pendingCloudStorageKey(userId)
+                    );
+                } catch {
+                    // A stale draft is harmless after a confirmed cloud save.
+                }
+            }
+
+            function cloneStateForCloud() {
+                return JSON.parse(JSON.stringify(state));
+            }
+
+            function markCloudConflict() {
+                cloudConflict = true;
+                cloudReady = false;
+                cloudDirty = true;
+                clearTimeout(cloudSaveTimer);
+                setCloudStatus(
+                    "تعارض محفوظ بأمان؛ راجع المسودة ثم أعد المحاولة",
+                    "conflict"
+                );
+                showToast(
+                    "تم إيقاف المزامنة لأن جهازاً أو تبويباً آخر حفظ نسخة أحدث. مسودتك الحالية محفوظة محلياً ولن تُستبدل تلقائياً.",
+                    "error"
+                );
+            }
+
+            async function retryConflictedCloudDraft() {
+                if (
+                    !cloudClient ||
+                    !currentUserId ||
+                    !cloudConflict ||
+                    cloudSaveInFlight
+                ) {
+                    return false;
+                }
+
+                const pending =
+                    readPendingCloudDraft(currentUserId);
+
+                if (!pending) {
+                    setCloudStatus(
+                        "لا توجد مسودة محلية لإعادة حفظها",
+                        "error"
+                    );
+                    return false;
+                }
+
+                const approved = window.confirm(
+                    "سيتم اعتماد مسودة هذا الجهاز واستبدال النسخة السحابية الأحدث بها. اضغط موافق للمتابعة، أو إلغاء للاحتفاظ بالنسختين دون تغيير."
+                );
+
+                if (!approved) {
+                    return false;
+                }
+
+                const requestEpoch = authEpoch;
+                const requestUserId = currentUserId;
+                const retryButton = $(
+                    "#cloudConflictRetryButton"
+                );
+
+                if (retryButton) {
+                    retryButton.disabled = true;
+                }
+
+                setCloudStatus(
+                    "جارٍ التحقق من أحدث نسخة سحابية",
+                    "saving"
+                );
+
+                try {
+                    const { data, error } = await cloudClient
+                        .from(CLOUD_STATE_TABLE)
+                        .select("revision")
+                        .eq("user_id", requestUserId)
+                        .maybeSingle();
+
+                    if (
+                        requestEpoch !== authEpoch ||
+                        requestUserId !== currentUserId
+                    ) {
+                        return false;
+                    }
+
+                    if (error || !data?.revision) {
+                        setCloudStatus(
+                            "تعذر الاتصال؛ مسودتك ما زالت محفوظة محلياً",
+                            "conflict"
+                        );
+                        return false;
+                    }
+
+                    const latestPending =
+                        readPendingCloudDraft(requestUserId);
+
+                    if (!latestPending) {
+                        setCloudStatus(
+                            "لم تعد المسودة المحلية متاحة",
+                            "error"
+                        );
+                        return false;
+                    }
+
+                    state = hydrateState(latestPending.state);
+                    cloudRevision = Number(data.revision);
+                    cloudReady = true;
+                    cloudConflict = false;
+                    cloudDirty = true;
+                    cloudSaveGeneration = Math.max(
+                        cloudSaveGeneration + 1,
+                        Number(latestPending.generation || 0) + 1
+                    );
+                    persistLocalState();
+                    writePendingCloudDraft(
+                        cloneStateForCloud(),
+                        cloudRevision
+                    );
+
+                    const saved = await flushCloudState();
+
+                    if (saved) {
+                        showToast(
+                            "تم اعتماد مسودة هذا الجهاز وحفظها سحابياً."
+                        );
+                    }
+
+                    return saved;
+                } catch {
+                    cloudConflict = true;
+                    cloudReady = false;
+                    setCloudStatus(
+                        "تعذر الاتصال؛ مسودتك ما زالت محفوظة محلياً",
+                        "conflict"
+                    );
+                    return false;
+                } finally {
+                    if (retryButton) {
+                        retryButton.disabled = false;
+                    }
+                }
+            }
+
+            function scheduleCloudSave() {
+                if (!cloudClient || !currentUserId) {
+                    return;
+                }
+
+                cloudDirty = true;
+                cloudSaveGeneration += 1;
+                writePendingCloudDraft();
+
+                if (!cloudReady || cloudConflict) {
+                    return;
+                }
+
+                setCloudStatus(
+                    "تغييرات بانتظار المزامنة",
+                    "pending"
+                );
+
+                clearTimeout(cloudSaveTimer);
+
+                if (cloudSaveInFlight) {
+                    cloudSaveQueued = true;
+                    return;
+                }
+
+                cloudSaveTimer = setTimeout(() => {
+                    void flushCloudState();
+                }, CLOUD_SAVE_DELAY_MS);
+            }
+
+            async function flushCloudState() {
+                if (
+                    !cloudClient ||
+                    !currentUserId ||
+                    !cloudReady ||
+                    cloudConflict
+                ) {
+                    return false;
+                }
+
+                if (cloudSaveInFlight) {
+                    cloudSaveQueued = true;
+                    return false;
+                }
+
+                clearTimeout(cloudSaveTimer);
+                cloudSaveTimer = null;
+                cloudSaveInFlight = true;
+                cloudSaveQueued = false;
+
+                const requestEpoch = authEpoch;
+                const requestUserId = currentUserId;
+                const requestGeneration = cloudSaveGeneration;
+                const expectedRevision = cloudRevision;
+                const snapshot = cloneStateForCloud();
+
+                writePendingCloudDraft(snapshot);
+                setCloudStatus("جارٍ الحفظ السحابي", "saving");
+
+                try {
+                    const { data, error } = await cloudClient.rpc(
+                        "save_user_app_state",
+                        {
+                            p_state: snapshot,
+                            p_state_version:
+                                Number(snapshot.version) || 7,
+                            p_expected_revision:
+                                expectedRevision,
+                            p_client_id: cloudClientId
+                        }
+                    );
+
+                    if (
+                        requestEpoch !== authEpoch ||
+                        requestUserId !== currentUserId
+                    ) {
+                        return false;
+                    }
+
+                    if (error) {
+                        if (
+                            error.code === "40001" ||
+                            String(error.message).includes(
+                                "state_conflict"
+                            )
+                        ) {
+                            markCloudConflict();
+                            return false;
+                        }
+
+                        setCloudStatus(
+                            "تعذر الاتصال؛ محفوظ محلياً",
+                            "error"
+                        );
+                        return false;
+                    }
+
+                    const result = Array.isArray(data)
+                        ? data[0]
+                        : data;
+
+                    if (!result?.new_revision) {
+                        setCloudStatus(
+                            "تعذر تأكيد الحفظ السحابي",
+                            "error"
+                        );
+                        return false;
+                    }
+
+                    cloudRevision = Number(
+                        result.new_revision
+                    );
+
+                    if (
+                        requestGeneration === cloudSaveGeneration
+                    ) {
+                        cloudDirty = false;
+                        clearPendingCloudDraft();
+                        setCloudStatus(
+                            "تمت المزامنة الآن",
+                            "synced"
+                        );
+                    } else {
+                        cloudDirty = true;
+                        cloudSaveQueued = true;
+                        writePendingCloudDraft();
+                    }
+
+                    cloudChannel?.postMessage({
+                        userId: currentUserId,
+                        clientId: cloudClientId,
+                        revision: cloudRevision
+                    });
+
+                    return true;
+                } catch {
+                    setCloudStatus(
+                        "تعذر الاتصال؛ محفوظ محلياً",
+                        "error"
+                    );
+                    return false;
+                } finally {
+                    cloudSaveInFlight = false;
+
+                    if (
+                        cloudSaveQueued &&
+                        cloudReady &&
+                        !cloudConflict
+                    ) {
+                        cloudSaveQueued = false;
+                        cloudSaveTimer = setTimeout(() => {
+                            void flushCloudState();
+                        }, 0);
+                    }
+                }
+            }
+
+            function saveState() {
+                if (!currentUserPhone) {
+                    return;
+                }
+
+                persistLocalState();
+                scheduleCloudSave();
             }
 
             let toastTimer = null;
@@ -3583,8 +4347,156 @@
                 }, 3600);
             }
 
-            function initializeAccountInterface() {
-                const signedIn = Boolean(currentUserPhone);
+            function openCloudChannel() {
+                cloudChannel?.close();
+                cloudChannel = null;
+
+                if (
+                    !currentUserId ||
+                    typeof BroadcastChannel === "undefined"
+                ) {
+                    return;
+                }
+
+                cloudChannel = new BroadcastChannel(
+                    `${STORAGE_KEY}:cloud:${currentUserId}`
+                );
+
+                cloudChannel.onmessage = (event) => {
+                    const message = event.data;
+
+                    if (
+                        !message ||
+                        message.userId !== currentUserId ||
+                        message.clientId === cloudClientId ||
+                        Number(message.revision || 0) <=
+                            cloudRevision
+                    ) {
+                        return;
+                    }
+
+                    if (cloudDirty || cloudSaveInFlight) {
+                        markCloudConflict();
+                        return;
+                    }
+
+                    cloudConflict = true;
+                    cloudReady = false;
+                    setCloudStatus(
+                        "نسخة أحدث متاحة؛ أعد تحميل الصفحة",
+                        "conflict"
+                    );
+                };
+            }
+
+            async function loadCloudStateForCurrentUser() {
+                if (!cloudClient || !currentUserId) {
+                    cloudReady = false;
+                    setCloudStatus(
+                        "الخدمة السحابية غير متاحة",
+                        "error"
+                    );
+                    return false;
+                }
+
+                setCloudStatus("جارٍ تحميل بياناتك", "saving");
+
+                try {
+                    const { data, error } = await cloudClient
+                        .from(CLOUD_STATE_TABLE)
+                        .select(
+                            "state,state_version,revision,updated_at,last_client_id"
+                        )
+                        .eq("user_id", currentUserId)
+                        .maybeSingle();
+
+                    if (error) {
+                        cloudReady = false;
+                        setCloudStatus(
+                            "السحابة غير مهيأة؛ محفوظ محلياً",
+                            "error"
+                        );
+                        return false;
+                    }
+
+                    cloudReady = true;
+                    cloudConflict = false;
+                    cloudRevision = Number(data?.revision || 0);
+
+                    if (!data) {
+                        cloudDirty = true;
+                        cloudSaveGeneration += 1;
+                        writePendingCloudDraft();
+
+                        const migrated =
+                            await flushCloudState();
+
+                        if (migrated) {
+                            persistLocalState();
+                            cleanupLegacyPhoneState();
+                            setCloudStatus(
+                                "تم نقل بياناتك إلى السحابة",
+                                "synced"
+                            );
+                        }
+
+                        return migrated;
+                    }
+
+                    const pending =
+                        readPendingCloudDraft(currentUserId);
+
+                    if (
+                        pending &&
+                        Number(pending.baseRevision) ===
+                            cloudRevision
+                    ) {
+                        state = hydrateState(pending.state);
+                        cloudDirty = true;
+                        cloudSaveGeneration = Math.max(
+                            cloudSaveGeneration + 1,
+                            Number(pending.generation || 0) + 1
+                        );
+                        persistLocalState();
+                        cleanupLegacyPhoneState();
+                        writePendingCloudDraft();
+
+                        cloudSaveTimer = setTimeout(() => {
+                            void flushCloudState();
+                        }, 0);
+                    } else if (pending) {
+                        state = hydrateState(pending.state);
+                        cloudDirty = true;
+                        cloudSaveGeneration = Math.max(
+                            cloudSaveGeneration,
+                            Number(pending.generation || 0)
+                        );
+                        persistLocalState();
+                        markCloudConflict();
+                    } else {
+                        state = hydrateState(data.state);
+                        cloudDirty = false;
+                        persistLocalState();
+                        cleanupLegacyPhoneState();
+                        setCloudStatus(
+                            "تم تحميل النسخة السحابية",
+                            "synced"
+                        );
+                    }
+
+                    resetTransientState();
+                    return !cloudConflict;
+                } catch {
+                    cloudReady = false;
+                    setCloudStatus(
+                        "تعذر الاتصال؛ محفوظ محلياً",
+                        "error"
+                    );
+                    return false;
+                }
+            }
+
+            function initializeAccountInterface(signedIn) {
                 const loginScreen = $("#loginScreen");
                 const application = $("#application");
 
@@ -3607,6 +4519,190 @@
                 }
             }
 
+            function setAuthMode(mode) {
+                authMode = mode === "register"
+                    ? "register"
+                    : "login";
+
+                const registering = authMode === "register";
+                const loginButton = $("#loginModeButton");
+                const registerButton = $("#registerModeButton");
+                const confirmField = $("#loginConfirmField");
+                const passwordInput = $("#loginPasswordInput");
+
+                loginButton.classList.toggle(
+                    "active",
+                    !registering
+                );
+                loginButton.setAttribute(
+                    "aria-selected",
+                    String(!registering)
+                );
+                registerButton.classList.toggle(
+                    "active",
+                    registering
+                );
+                registerButton.setAttribute(
+                    "aria-selected",
+                    String(registering)
+                );
+                confirmField.hidden = !registering;
+                passwordInput.autocomplete = registering
+                    ? "new-password"
+                    : "current-password";
+                $("#loginSubmitButton").textContent = registering
+                    ? "إنشاء الحساب"
+                    : "تسجيل الدخول";
+                $("#loginError").textContent = "";
+            }
+
+            function setLoginBusy(busy) {
+                [
+                    "#loginModeButton",
+                    "#registerModeButton",
+                    "#loginSubmitButton",
+                    "#loginPhoneInput",
+                    "#loginPasswordInput",
+                    "#loginPasswordConfirmInput"
+                ].forEach((selector) => {
+                    const element = $(selector);
+
+                    if (element) {
+                        element.disabled = busy;
+                    }
+                });
+            }
+
+            function describeAuthError(error, mode) {
+                const code = String(error?.code || "");
+                const message = String(error?.message || "");
+
+                if (
+                    code.includes("email_provider_disabled") ||
+                    message.toLowerCase().includes(
+                        "email provider"
+                    )
+                ) {
+                    return "خدمة إنشاء الحسابات غير مفعّلة بعد في إعدادات Supabase.";
+                }
+
+                if (
+                    code.includes("email_not_confirmed") ||
+                    message.toLowerCase().includes(
+                        "email not confirmed"
+                    )
+                ) {
+                    return "إعداد تأكيد الحساب ما زال مفعّلاً في Supabase.";
+                }
+
+                if (
+                    code.includes("over_request_rate_limit") ||
+                    message.toLowerCase().includes("rate limit")
+                ) {
+                    return "تم تجاوز عدد المحاولات المسموح. حاول لاحقاً.";
+                }
+
+                return mode === "register"
+                    ? "تعذر إنشاء الحساب. قد يكون الرقم مسجلاً مسبقاً."
+                    : "رقم الجوال أو كلمة المرور غير صحيحة.";
+            }
+
+            async function bootstrapApplication() {
+                if (!cloudClient) {
+                    currentUserId = "";
+                    currentUserPhone = "";
+                    initializeAccountInterface(false);
+                    $("#loginError").textContent =
+                        "تعذر تحميل خدمة الدخول السحابي. تحقق من الاتصال بالإنترنت.";
+                    return;
+                }
+
+                try {
+                    const { data, error } =
+                        await cloudClient.auth.getSession();
+
+                    if (error) {
+                        throw error;
+                    }
+
+                    const session = data.session;
+
+                    if (!session?.user) {
+                        currentUserId = "";
+                        currentUserPhone = "";
+
+                        try {
+                            sessionStorage.removeItem(
+                                ACTIVE_USER_SESSION_KEY
+                            );
+                        } catch {
+                            // The login screen can still be displayed.
+                        }
+
+                        initializeAccountInterface(false);
+                        return;
+                    }
+
+                    const sessionPhone =
+                        phoneFromAuthUser(session.user);
+
+                    if (!sessionPhone) {
+                        await cloudClient.auth.signOut({
+                            scope: "local"
+                        });
+                        currentUserId = "";
+                        currentUserPhone = "";
+                        initializeAccountInterface(false);
+                        $("#loginError").textContent =
+                            "تعذر التحقق من رقم الجوال المرتبط بالحساب.";
+                        return;
+                    }
+
+                    currentUserId = session.user.id;
+                    currentUserPhone = sessionPhone;
+                    authEpoch += 1;
+
+                    try {
+                        sessionStorage.setItem(
+                            ACTIVE_USER_SESSION_KEY,
+                            currentUserPhone
+                        );
+                    } catch {
+                        // Supabase still owns the authenticated session.
+                    }
+
+                    state = loadAuthenticatedLocalState();
+                    resetTransientState();
+                    openCloudChannel();
+                    await loadCloudStateForCurrentUser();
+                    initializeAccountInterface(true);
+                    renderAll();
+                } catch {
+                    currentUserId = "";
+                    currentUserPhone = "";
+                    initializeAccountInterface(false);
+                    $("#loginError").textContent =
+                        "تعذر بدء الجلسة السحابية. حاول مرة أخرى.";
+                }
+            }
+
+            $("#loginModeButton").addEventListener(
+                "click",
+                () => setAuthMode("login")
+            );
+
+            $("#registerModeButton").addEventListener(
+                "click",
+                () => setAuthMode("register")
+            );
+
+            $("#cloudConflictRetryButton").addEventListener(
+                "click",
+                () => {
+                    void retryConflictedCloudDraft();
+                }
+            );
+
             $("#loginPhoneInput").addEventListener(
                 "input",
                 (event) => {
@@ -3619,69 +4715,195 @@
                 }
             );
 
+            [
+                "#loginPasswordInput",
+                "#loginPasswordConfirmInput"
+            ].forEach((selector) => {
+                $(selector).addEventListener("input", () => {
+                    $("#loginError").textContent = "";
+                });
+            });
+
             $("#loginForm").addEventListener(
                 "submit",
-                (event) => {
+                async (event) => {
                     event.preventDefault();
 
                     const phone = normalizeUserPhone(
                         $("#loginPhoneInput").value
                     );
+                    const password =
+                        $("#loginPasswordInput").value;
+                    const passwordConfirmation =
+                        $("#loginPasswordConfirmInput").value;
 
                     if (!phone) {
                         $("#loginError").textContent =
-                            "أدخل رقم جوال صحيحاً مكوّناً من 10 أرقام.";
+                            "أدخل رقم جوال سعودياً صحيحاً يبدأ بـ05 ويتكون من 10 أرقام.";
 
                         $("#loginPhoneInput").focus();
                         return;
                     }
 
+                    if (password.length < 8) {
+                        $("#loginError").textContent =
+                            "يجب ألا تقل كلمة المرور عن 8 أحرف.";
+                        $("#loginPasswordInput").focus();
+                        return;
+                    }
+
+                    if (
+                        authMode === "register" &&
+                        password !== passwordConfirmation
+                    ) {
+                        $("#loginError").textContent =
+                            "كلمتا المرور غير متطابقتين.";
+                        $("#loginPasswordConfirmInput").focus();
+                        return;
+                    }
+
+                    if (!cloudClient) {
+                        $("#loginError").textContent =
+                            "خدمة الدخول السحابي غير متاحة حالياً.";
+                        return;
+                    }
+
+                    setLoginBusy(true);
+
                     try {
+                        const credentials = {
+                            email: phoneToAuthEmail(phone),
+                            password
+                        };
+
+                        const result = authMode === "register"
+                            ? await cloudClient.auth.signUp({
+                                  ...credentials,
+                                  options: {
+                                      data: {
+                                          local_phone: phone,
+                                          auth_identifier_version: 1
+                                      }
+                                  }
+                              })
+                            : await cloudClient.auth.signInWithPassword(
+                                  credentials
+                              );
+
+                        if (result.error) {
+                            $("#loginError").textContent =
+                                describeAuthError(
+                                    result.error,
+                                    authMode
+                                );
+                            return;
+                        }
+
+                        if (
+                            authMode === "register" &&
+                            Array.isArray(
+                                result.data.user?.identities
+                            ) &&
+                            result.data.user.identities.length === 0
+                        ) {
+                            $("#loginError").textContent =
+                                "رقم الجوال مسجّل مسبقاً. استخدم تسجيل الدخول.";
+                            return;
+                        }
+
+                        if (!result.data.session) {
+                            $("#loginError").textContent =
+                                "تم إنشاء الحساب، لكن إعداد تأكيد الحساب ما زال مفعّلاً في Supabase.";
+                            return;
+                        }
+
                         sessionStorage.setItem(
                             ACTIVE_USER_SESSION_KEY,
                             phone
                         );
 
-                        const submitButton =
-                            event.submitter ||
-                            $(
-                                "#loginForm button[type='submit']"
-                            );
-
-                        submitButton.disabled = true;
                         document.body.classList.add(
                             "auth-pending"
                         );
                         window.location.reload();
                     } catch {
                         $("#loginError").textContent =
-                            "تعذر بدء جلسة المستخدم في هذا المتصفح.";
+                            "تعذر الاتصال بخدمة الدخول السحابي.";
+                    } finally {
+                        setLoginBusy(false);
                     }
                 }
             );
 
             $("#logoutButton").addEventListener(
                 "click",
-                () => {
-                    saveState();
+                async () => {
+                    persistLocalState();
+
+                    if (cloudDirty && cloudReady) {
+                        await flushCloudState();
+                    }
+
+                    try {
+                        await cloudClient?.auth.signOut({
+                            scope: "local"
+                        });
+                    } catch {
+                        // The local session is cleared below even offline.
+                    }
+
+                    authEpoch += 1;
+                    cloudChannel?.close();
+                    cloudChannel = null;
 
                     try {
                         sessionStorage.removeItem(
                             ACTIVE_USER_SESSION_KEY
                         );
-
-                        document.body.classList.add(
-                            "auth-pending"
+                        sessionStorage.removeItem(
+                            SUPABASE_AUTH_STORAGE_KEY
                         );
-                        window.location.reload();
                     } catch {
-                        showToast(
-                            "تعذر تسجيل الخروج من هذا المتصفح.",
-                            "error"
-                        );
+                        // Reloading still removes the in-memory session.
+                    }
+
+                    document.body.classList.add(
+                        "auth-pending"
+                    );
+                    window.location.reload();
+                }
+            );
+
+            document.addEventListener(
+                "visibilitychange",
+                () => {
+                    if (
+                        document.visibilityState === "hidden" &&
+                        cloudDirty &&
+                        cloudReady
+                    ) {
+                        void flushCloudState();
                     }
                 }
             );
+
+            window.addEventListener("online", () => {
+                if (
+                    cloudDirty &&
+                    cloudReady &&
+                    !cloudConflict &&
+                    !cloudSaveInFlight
+                ) {
+                    clearTimeout(cloudSaveTimer);
+                    setCloudStatus(
+                        "عاد الاتصال؛ جارٍ استكمال المزامنة",
+                        "pending"
+                    );
+                    cloudSaveTimer = setTimeout(() => {
+                        void flushCloudState();
+                    }, 0);
+                }
+            });
 
             function showPlacementError(plan) {
                 if (plan.message === DUPLICATE_MESSAGE) {
@@ -10536,12 +11758,8 @@
                 }
             );
 
-            initializeAccountInterface();
-
-            if (currentUserPhone) {
-                saveState();
-                renderAll();
-            }
+            setAuthMode("login");
+            void bootstrapApplication();
         })();
     </script>
 </body>
