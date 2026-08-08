@@ -10487,9 +10487,16 @@
                                             <span>المادة: <b>${escapeHTML(
                                                 row.subject
                                             )}</b></span>
-                                            <span>المنتظر: <b>${escapeHTML(
+                                            <span style="display: flex; align-items: center; gap: 8px;">المنتظر: <b>${escapeHTML(
                                                 row.waitingTeacher
-                                            )}</b></span>
+                                            )}</b>
+                                            <a href="https://wa.me/?text=${encodeURIComponent(`المعلم (${row.waitingTeacher}) تم تكليفكم بحصة انتظار , الحصة (${row.period}) في فصل (${row.className}) يرجى زيارة وكيل الشؤون التعليمية للتوقيع في سجل الانتظار`)}" 
+                                               target="_blank" 
+                                               rel="noopener noreferrer" 
+                                               style="display: inline-flex; align-items: center; padding: 2px 8px; background-color: #25D366; color: white; border-radius: 12px; text-decoration: none; font-size: 0.75rem; font-weight: bold; line-height: 1.2;">
+                                                💬 إرسال
+                                            </a>
+                                            </span>
                                         </div>
                                     `
                                   )
