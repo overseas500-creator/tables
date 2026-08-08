@@ -2826,40 +2826,43 @@
         aria-hidden="true"
         aria-label="تقرير حصص الانتظار اليومي"
     >
-        <header class="report-header">
-            <div class="report-code report-code-top">(و.ت.ع.ن -01-01)</div>
-
-            <div class="report-logo">
-                <img
-                    id="ministryLogo"
-                    src="https://drive.google.com/thumbnail?id=1gXEAQdA1pmTdKUid_oLFsEba3UDqzgJb&sz=w1000"
-                    alt="شعار وزارة التعليم"
-                    referrerpolicy="no-referrer"
-                >
-
-                <div id="ministryLogoFallback" class="report-logo-fallback" hidden>
-                    وزارة التعليم
-                </div>
-            </div>
-
-            <div class="report-identity">
-                <p>المملكة العربية السعودية</p>
-                <p>وزارة التعليم</p>
-                <p id="printSchoolName">اسم المدرسة</p>
-            </div>
-        </header>
-
-        <h1 class="report-title">سجل توزيع الانتظار اليومي</h1>
-
-        <div id="printTeacherTables"></div>
-
-        <footer class="report-footer">
-            <div class="report-signature">
-                وكيل الشؤون التعليمية / ............................
-                &nbsp;&nbsp;&nbsp;
-                التوقيع: ............................
-            </div>
-        </footer>
+        <table style="width: 100%; border-collapse: collapse; border: none;">
+            <thead style="display: table-header-group;">
+                <tr>
+                    <td style="border: none; padding-bottom: 20px;">
+                        <div style="position: relative; width: 100%;">
+                            <div style="position: absolute; right: 0; top: 0; text-align: right; font-weight: bold; font-size: 16px; line-height: 1.5; color: #1c3c5a;">
+                                <p style="margin: 0;">المملكة العربية السعودية</p>
+                                <p style="margin: 0;">وزارة التعليم</p>
+                                <p id="printSchoolName" style="margin: 0;">اسم المدرسة</p>
+                            </div>
+                            <div style="text-align: center;">
+                                <img id="ministryLogo" src="https://drive.google.com/thumbnail?id=1gXEAQdA1pmTdKUid_oLFsEba3UDqzgJb&sz=w1000" style="width: 140px; height: auto;" alt="شعار وزارة التعليم" referrerpolicy="no-referrer">
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; font-weight: bold; color: #1c3c5a; border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-top: 30px;">
+                            <div style="font-size: 18px;">رقم النموذج (7) اسم النموذج : سجل توزيع الانتظار اليومي</div>
+                            <div style="font-size: 16px;">رمز النموذج : (و.ت.ع.ن- 01 - 01)</div>
+                        </div>
+                    </td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="border: none; padding: 0;" id="printTeacherTables">
+                    </td>
+                </tr>
+            </tbody>
+            <tfoot style="display: table-footer-group;">
+                <tr>
+                    <td style="border: none; padding-top: 40px;">
+                        <div style="text-align: center; font-weight: bold; font-size: 18px; color: #1c3c5a;">
+                            وكيل الشؤون التعليمية........................................................... التوقيع..................................................
+                        </div>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
     </section>
 
     <script>
@@ -11571,68 +11574,83 @@
             }
 
             function createTeacherReport(group, meta) {
-                const section =
-                    document.createElement("section");
-
+                const section = document.createElement("section");
                 section.className = "teacher-report";
+                section.style.marginBottom = "30px";
+                section.style.pageBreakInside = "avoid";
 
-                const preamble =
-                    document.createElement("p");
-
-                preamble.className = "report-preamble";
-                preamble.textContent =
-                    `نظراً لغياب المعلم / ${group.absentTeacher || "........................"} ` +
-                    `لهذا اليوم ${meta.day || "................"} ` +
-                    `الموافق ${formatHijri(meta.date)} هـ، ` +
-                    "نأمل تسديد الجدول الموضح والتوقيع بالعلم، وعدم ترك الفصل.";
+                const preamble = document.createElement("div");
+                preamble.style.fontWeight = "bold";
+                preamble.style.color = "#1c3c5a";
+                preamble.style.fontSize = "14px";
+                preamble.style.marginBottom = "10px";
+                preamble.style.lineHeight = "1.8";
+                preamble.style.textAlign = "right";
+                preamble.innerHTML = `
+                    <div>إخواني المعلمين / نظراً لغياب الزميل : ${group.absentTeacher || "........................"}</div>
+                    <div>هذا اليوم ${meta.day || "................"} الموافق : ${formatHijri(meta.date)}هـ , آمل تسديد مكانه حسب الجدول الموضح والتوقيع بالعلم ... ولكم جزيل الشكر</div>
+                `;
 
                 section.appendChild(preamble);
 
-                const table =
-                    document.createElement("table");
-
+                const table = document.createElement("table");
                 table.className = "official-report-table";
+                table.style.width = "100%";
+                table.style.borderCollapse = "collapse";
+                table.style.textAlign = "center";
+                table.style.border = "1px solid #ccc";
 
-                const thead =
-                    document.createElement("thead");
+                const thead = document.createElement("thead");
+                const headingRow = document.createElement("tr");
 
-                const headingRow =
-                    document.createElement("tr");
-
-                REPORT_COLUMNS.forEach(([, label]) => {
-                    headingRow.appendChild(
-                        createReportCell("th", label)
-                    );
+                REPORT_COLUMNS.forEach(([key, label]) => {
+                    const th = document.createElement("th");
+                    th.textContent = label;
+                    th.style.border = "1px solid #ccc";
+                    th.style.padding = "8px";
+                    th.style.color = "white";
+                    if (key === "period") {
+                        th.style.backgroundColor = "#5ea396";
+                    } else {
+                        th.style.backgroundColor = "#1c3c5a";
+                    }
+                    headingRow.appendChild(th);
                 });
 
                 thead.appendChild(headingRow);
                 table.appendChild(thead);
 
-                const tbody =
-                    document.createElement("tbody");
+                const tbody = document.createElement("tbody");
+                const sourceRowsMap = new Map();
+                if (Array.isArray(group.rows)) {
+                    group.rows.forEach(row => {
+                        const period = parseInt(row.period, 10);
+                        if (!isNaN(period)) {
+                            sourceRowsMap.set(period, row);
+                        }
+                    });
+                }
 
-                const sourceRows = Array.isArray(group.rows)
-                    ? group.rows
-                    : [];
-
-                for (
-                    let index = 0;
-                    index < sourceRows.length;
-                    index += 1
-                ) {
-                    const source = sourceRows[index];
+                for (let i = 1; i <= 7; i++) {
                     const row = document.createElement("tr");
+                    const source = sourceRowsMap.get(i) || {};
 
                     REPORT_COLUMNS.forEach(([key]) => {
                         let value = source[key] || "";
-
-                        if (key === "period" && !value) {
-                            value = index + 1;
+                        if (key === "period") {
+                            value = i;
                         }
 
-                        row.appendChild(
-                            createReportCell("td", value)
-                        );
+                        const td = document.createElement("td");
+                        td.textContent = value;
+                        td.style.border = "1px solid #ccc";
+                        td.style.padding = "8px";
+                        if (key === "period") {
+                            td.style.backgroundColor = "#5ea396";
+                            td.style.color = "white";
+                            td.style.fontWeight = "bold";
+                        }
+                        row.appendChild(td);
                     });
 
                     tbody.appendChild(row);
