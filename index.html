@@ -3827,10 +3827,10 @@
 
             function resetTransientState() {
                 activeClassId = state.classes[0]?.id || "";
-                selectedAbsentTeacherIds = [];
+                selectedAbsentTeacherIds = state.waitingData?.absentTeacherIds || [];
                 currentPlacement = null;
                 activeDrag = null;
-                lastWaitingReport = null;
+                lastWaitingReport = state.waitingData?.report || null;
                 selectedScheduleReportTeacherIds = new Set(
                     state.teachers.map((teacher) => teacher.id)
                 );
