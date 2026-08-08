@@ -3554,7 +3554,12 @@
                         raw.waitingCounts &&
                         typeof raw.waitingCounts === "object"
                             ? raw.waitingCounts
-                            : {}
+                            : {},
+                    waitingData:
+                        raw.waitingData &&
+                        typeof raw.waitingData === "object"
+                            ? raw.waitingData
+                            : null
                 };
 
                 if (!Array.isArray(raw.teachingAssignments)) {
