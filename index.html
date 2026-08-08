@@ -10495,7 +10495,7 @@
                             state.school.name ||
                             "اسم المدرسة",
                         day:
-                            dayById(dayId)?.name || "",
+                            ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"][dateFromInput(dateValue).getDay()] || "",
                         dayId,
                         date: dateValue
                     },
