@@ -3805,10 +3805,10 @@
 
             let state = loadState();
             let activeClassId = state.classes[0]?.id || "";
-            let selectedAbsentTeacherIds = [];
+            let selectedAbsentTeacherIds = state.waitingData?.absentTeacherIds || [];
             let currentPlacement = null;
             let activeDrag = null;
-            let lastWaitingReport = null;
+            let lastWaitingReport = state.waitingData?.report || null;
             let selectedScheduleReportTeacherIds = new Set(
                 state.teachers.map((teacher) => teacher.id)
             );
@@ -3901,6 +3901,12 @@
                     if (!currentUserPhone) {
                         return false;
                     }
+
+                    state.waitingData = {
+                        absentTeacherIds: selectedAbsentTeacherIds,
+                        report: lastWaitingReport,
+                        date: $("#reportDateInput")?.value || new Date().toISOString().split("T")[0]
+                    };
 
                     invalidateStaleScheduleApproval(state);
 
@@ -6712,6 +6718,7 @@
 
             function invalidateWaitingReport() {
                 lastWaitingReport = null;
+                saveState();
 
                 const container = $("#waitingResults");
 
@@ -7197,6 +7204,18 @@
                 renderDailySupervision();
                 renderScheduleReportSelectors();
                 renderAbsentTeacherChips();
+                if (lastWaitingReport) {
+                    renderWaitingResults(lastWaitingReport);
+                } else {
+                    const container = $("#waitingResults");
+                    if (container) {
+                        container.innerHTML = `
+                            <div class="empty-state">
+                                لم يتم إضافة أي معلم غائب.
+                            </div>
+                        `;
+                    }
+                }
             }
 
             function resetStageEditor() {
@@ -10186,7 +10205,7 @@
                 }
             }
 
-            $("#reportDateInput").value = localDateValue(
+            $("#reportDateInput").value = state.waitingData?.date || localDateValue(
                 new Date()
             );
 
@@ -10194,7 +10213,10 @@
 
             $("#reportDateInput").addEventListener(
                 "change",
-                syncDayFromDate
+                (e) => {
+                    syncDayFromDate();
+                    saveState();
+                }
             );
 
             $("#addAbsentTeacherButton").addEventListener(
@@ -10226,6 +10248,7 @@
                     selectedAbsentTeacherIds.push(teacherId);
                     lastWaitingReport = null;
                     renderAbsentTeacherChips();
+                    saveState();
                 }
             );
 
@@ -10249,6 +10272,7 @@
 
                     lastWaitingReport = null;
                     renderAbsentTeacherChips();
+                    saveState();
                 }
             );
 
@@ -10541,6 +10565,7 @@
                 lastWaitingReport = report;
                 renderWaitingResults(report);
                 showToast("تم إنشاء توزيع حصص الانتظار.");
+                saveState();
 
                 return report;
             }
