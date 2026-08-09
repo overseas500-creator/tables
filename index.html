@@ -10564,6 +10564,8 @@
                                             subjectById(
                                                 lesson.subjectId
                                             )?.name || "",
+                                        waitingTeacherId:
+                                            replacement?.id || null,
                                         waitingTeacher:
                                             replacement?.name ||
                                             "لم يُسند",
@@ -10813,8 +10815,13 @@
                         if (entry.report && entry.report.groups) {
                             entry.report.groups.forEach(group => {
                                 group.rows.forEach(row => {
-                                    if (row.waitingTeacherId && teacherStats[row.waitingTeacherId]) {
-                                        teacherStats[row.waitingTeacherId].waitingCount += 1;
+                                    let tId = row.waitingTeacherId;
+                                    if (!tId && row.waitingTeacher) {
+                                        const found = state.teachers.find(t => t.name === row.waitingTeacher);
+                                        if (found) tId = found.id;
+                                    }
+                                    if (tId && teacherStats[tId]) {
+                                        teacherStats[tId].waitingCount += 1;
                                     }
                                 });
                             });
@@ -10851,7 +10858,12 @@
                         if (entry.report && entry.report.groups) {
                             entry.report.groups.forEach(group => {
                                 group.rows.forEach(row => {
-                                    if (row.waitingTeacherId === teacherId) {
+                                    let tId = row.waitingTeacherId;
+                                    if (!tId && row.waitingTeacher) {
+                                        const found = state.teachers.find(t => t.name === row.waitingTeacher);
+                                        if (found) tId = found.id;
+                                    }
+                                    if (tId === teacherId) {
                                         records.push({
                                             date: entry.date,
                                             period: row.period,
