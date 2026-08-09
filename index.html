@@ -12035,8 +12035,8 @@
             }
 
             function renderOfficialReport(report) {
-                $("#printSchoolName").textContent =
-                    report.meta.schoolName || "اسم المدرسة";
+                const currentSchoolName = state.school?.name && state.school.name !== "اسم المدرسة" ? state.school.name : (report.meta?.schoolName || "اسم المدرسة");
+                $("#printSchoolName").textContent = currentSchoolName;
 
                 const container =
                     $("#printTeacherTables");
