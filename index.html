@@ -2806,6 +2806,66 @@
                             أضف المعلمين الغائبين ثم اضغط «إنشاء توزيع الانتظار».
                         </div>
                     </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card" style="margin-top: 20px;">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">التقارير التراكمية وسجل الانتظار</h2>
+                        <p class="card-description">
+                            إدارة السجل التاريخي لحصص الانتظار وتوليد التقارير التراكمية للمعلمين.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="absence-layout">
+                    <div class="settings-panel wide">
+                        <h3>سجل التوزيعات المحفوظة</h3>
+                        <div class="table-container" style="max-height: 250px; overflow-y: auto;">
+                            <table class="report-table">
+                                <thead>
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="waitingHistoryTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="settings-panel wide" style="margin-top: 20px;">
+                        <h3>التقارير التراكمية</h3>
+                        <div class="form-grid three" style="align-items: end;">
+                            <div class="field">
+                                <label for="cumulativeStartDate">من تاريخ</label>
+                                <input id="cumulativeStartDate" class="control" type="date">
+                            </div>
+                            <div class="field">
+                                <label for="cumulativeEndDate">إلى تاريخ</label>
+                                <input id="cumulativeEndDate" class="control" type="date">
+                            </div>
+                            <div class="field">
+                                <label for="cumulativeTeacherSelect">المعلم</label>
+                                <select id="cumulativeTeacherSelect" class="control">
+                                    <option value="ALL">الجميع (تقرير شامل)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="actions" style="margin-top: 15px;">
+                            <button id="generateCumulativeReportBtn" type="button" class="btn btn-primary">
+                                عرض التقرير
+                            </button>
+                            <button id="printCumulativeReportBtn" type="button" class="btn btn-dark" style="display: none;">
+                                طباعة التقرير
+                            </button>
+                        </div>
+                        <div id="cumulativeReportResults" class="waiting-results" style="margin-top: 15px;">
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
@@ -2855,6 +2915,42 @@
                 </tr>
             </tbody>
 
+        </table>
+    </section>
+
+    <section
+        id="cumulativePrintReport"
+        aria-hidden="true"
+        aria-label="التقرير التراكمي"
+    >
+        <table style="width: 100%; border-collapse: collapse; border: none;">
+            <thead style="display: table-header-group;">
+                <tr>
+                    <td style="border: none; padding-bottom: 20px;">
+                        <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; width: 100%;">
+                            <div style="text-align: right; font-weight: bold; font-size: 14px; line-height: 1.5; color: #1c3c5a;">
+                                <p style="margin: 0;">المملكة العربية السعودية</p>
+                                <p style="margin: 0;">وزارة التعليم</p>
+                                <p id="cumulativePrintSchoolName" style="margin: 0;">اسم المدرسة</p>
+                            </div>
+                            <div style="text-align: center;">
+                                <img src="https://drive.google.com/thumbnail?id=1gXEAQdA1pmTdKUid_oLFsEba3UDqzgJb&sz=w1000" style="width: 120px; height: auto;" alt="شعار وزارة التعليم" referrerpolicy="no-referrer">
+                            </div>
+                            <div></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; font-weight: bold; color: #1c3c5a; border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-top: 15px;">
+                            <div id="cumulativePrintTitle" style="font-size: 14px;">التقرير التراكمي لحصص الانتظار</div>
+                            <div id="cumulativePrintDateRange" style="font-size: 13px;"></div>
+                        </div>
+                    </td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="border: none; padding: 0;" id="cumulativePrintContent">
+                    </td>
+                </tr>
+            </tbody>
         </table>
     </section>
 
@@ -3548,7 +3644,10 @@
                         raw.waitingData &&
                         typeof raw.waitingData === "object"
                             ? raw.waitingData
-                            : null
+                            : null,
+                    waitingHistory: Array.isArray(raw.waitingHistory)
+                        ? raw.waitingHistory
+                        : []
                 };
 
                 if (!Array.isArray(raw.teachingAssignments)) {
@@ -7205,6 +7304,8 @@
                 renderDailySupervision();
                 renderScheduleReportSelectors();
                 renderAbsentTeacherChips();
+                renderWaitingHistory();
+                renderCumulativeTeachersSelect();
                 if (lastWaitingReport) {
                     renderWaitingResults(lastWaitingReport);
                 } else {
@@ -10565,8 +10666,28 @@
 
                 lastWaitingReport = report;
                 renderWaitingResults(report);
+                
+                const currentDate = $("#reportDateInput")?.value || new Date().toISOString().split("T")[0];
+                if (!state.waitingHistory) {
+                    state.waitingHistory = [];
+                }
+                const existingIndex = state.waitingHistory.findIndex(h => h.date === currentDate);
+                const historyEntry = {
+                    id: "wh-" + Date.now(),
+                    date: currentDate,
+                    absentTeacherIds: [...selectedAbsentTeacherIds],
+                    report: report
+                };
+                if (existingIndex >= 0) {
+                    state.waitingHistory[existingIndex] = historyEntry;
+                } else {
+                    state.waitingHistory.push(historyEntry);
+                }
+
                 showToast("تم إنشاء توزيع حصص الانتظار.");
                 saveState();
+                
+                renderWaitingHistory();
 
                 return report;
             }
@@ -10575,6 +10696,255 @@
                 "click",
                 generateWaitingReport
             );
+
+            function renderWaitingHistory() {
+                const tbody = $("#waitingHistoryTableBody");
+                if (!tbody) return;
+
+                if (!state.waitingHistory || state.waitingHistory.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; color: #666;">لا توجد سجلات محفوظة</td></tr>`;
+                    return;
+                }
+
+                const sortedHistory = [...state.waitingHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                tbody.innerHTML = sortedHistory.map(entry => `
+                    <tr>
+                        <td style="font-weight: bold;">${entry.date}</td>
+                        <td>
+                            <button type="button" class="btn btn-soft" onclick="viewWaitingHistory('${entry.id}')" style="padding: 4px 8px; font-size: 11px;">عرض</button>
+                            <button type="button" class="btn btn-soft" onclick="deleteWaitingHistory('${entry.id}')" style="padding: 4px 8px; font-size: 11px; color: #e11d48; border-color: #fecdd3;">حذف</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            window.viewWaitingHistory = (id) => {
+                const entry = state.waitingHistory.find(h => h.id === id);
+                if (!entry) return;
+                
+                $("#reportDateInput").value = entry.date;
+                syncDayFromDate();
+                
+                selectedAbsentTeacherIds = [...entry.absentTeacherIds];
+                lastWaitingReport = entry.report;
+                
+                renderAbsentTeacherChips();
+                renderWaitingResults(entry.report);
+                saveState();
+            };
+
+            window.deleteWaitingHistory = (id) => {
+                if (!confirm("هل أنت متأكد من حذف هذا السجل بشكل نهائي؟")) return;
+                
+                state.waitingHistory = state.waitingHistory.filter(h => h.id !== id);
+                saveState();
+                renderWaitingHistory();
+                
+                if (lastWaitingReport) {
+                    const currentDate = $("#reportDateInput")?.value || new Date().toISOString().split("T")[0];
+                    if (!state.waitingHistory.some(h => h.date === currentDate)) {
+                        invalidateWaitingReport();
+                    }
+                }
+            };
+
+            function renderCumulativeTeachersSelect() {
+                const select = $("#cumulativeTeacherSelect");
+                if (!select) return;
+                
+                const currentVal = select.value;
+                select.innerHTML = '<option value="ALL">الجميع (تقرير شامل)</option>';
+                
+                state.teachers.filter(t => !t.excludeFromWaiting).forEach(teacher => {
+                    const option = document.createElement("option");
+                    option.value = teacher.id;
+                    option.textContent = teacher.name;
+                    select.appendChild(option);
+                });
+                
+                if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
+                    select.value = currentVal;
+                }
+            }
+
+            $("#generateCumulativeReportBtn")?.addEventListener("click", () => {
+                const startDate = $("#cumulativeStartDate").value;
+                const endDate = $("#cumulativeEndDate").value;
+                const teacherId = $("#cumulativeTeacherSelect").value;
+                
+                if (!startDate || !endDate) {
+                    showToast("يرجى تحديد تاريخ البداية والنهاية.", "error");
+                    return;
+                }
+                
+                const historyInRange = (state.waitingHistory || []).filter(h => {
+                    return h.date >= startDate && h.date <= endDate;
+                });
+                
+                const container = $("#cumulativeReportResults");
+                
+                if (historyInRange.length === 0) {
+                    container.innerHTML = `<div class="empty-state">لا توجد سجلات انتظار في هذه الفترة.</div>`;
+                    $("#printCumulativeReportBtn").style.display = 'none';
+                    return;
+                }
+                
+                let html = '';
+                
+                if (teacherId === 'ALL') {
+                    const teacherStats = {};
+                    state.teachers.forEach(t => {
+                        if (!t.excludeFromWaiting) {
+                            teacherStats[t.id] = { name: t.name, waitingCount: 0, basicCount: 0 };
+                        }
+                    });
+                    
+                    const teacherBasicCounts = {};
+                    state.teachingAssignments.forEach(a => {
+                        teacherBasicCounts[a.teacherId] = (teacherBasicCounts[a.teacherId] || 0) + a.periods;
+                    });
+                    
+                    Object.keys(teacherStats).forEach(id => {
+                        teacherStats[id].basicCount = teacherBasicCounts[id] || 0;
+                    });
+                    
+                    historyInRange.forEach(entry => {
+                        if (entry.report && entry.report.groups) {
+                            entry.report.groups.forEach(group => {
+                                group.rows.forEach(row => {
+                                    if (row.waitingTeacherId && teacherStats[row.waitingTeacherId]) {
+                                        teacherStats[row.waitingTeacherId].waitingCount += 1;
+                                    }
+                                });
+                            });
+                        }
+                    });
+                    
+                    const sortedStats = Object.values(teacherStats).sort((a,b) => b.waitingCount - a.waitingCount);
+                    
+                    html = `
+                        <table class="report-table" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>اسم المعلم</th>
+                                    <th>إجمالي حصص الانتظار المسندة</th>
+                                    <th>عدد الحصص الأساسية</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${sortedStats.map(stat => `
+                                    <tr>
+                                        <td>${escapeHTML(stat.name)}</td>
+                                        <td style="font-weight:bold; color:var(--brand);">${stat.waitingCount}</td>
+                                        <td>${stat.basicCount}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                } else {
+                    const teacher = state.teachers.find(t => t.id === teacherId);
+                    const records = [];
+                    
+                    historyInRange.forEach(entry => {
+                        if (entry.report && entry.report.groups) {
+                            entry.report.groups.forEach(group => {
+                                group.rows.forEach(row => {
+                                    if (row.waitingTeacherId === teacherId) {
+                                        records.push({
+                                            date: entry.date,
+                                            period: row.period,
+                                            className: row.className,
+                                            subject: row.subject,
+                                            absentTeacher: group.absentTeacher
+                                        });
+                                    }
+                                });
+                            });
+                        }
+                    });
+                    
+                    records.sort((a,b) => new Date(a.date) - new Date(b.date));
+                    
+                    if (records.length === 0) {
+                        html = `<div class="empty-state">لم يسند للمعلم ${escapeHTML(teacher?.name)} أي حصص انتظار في هذه الفترة.</div>`;
+                    } else {
+                        html = `
+                            <table class="report-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>الحصة</th>
+                                        <th>الفصل</th>
+                                        <th>المادة</th>
+                                        <th>المعلم الغائب</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${records.map(rec => `
+                                        <tr>
+                                            <td>${rec.date}</td>
+                                            <td>${rec.period}</td>
+                                            <td>${escapeHTML(rec.className)}</td>
+                                            <td>${escapeHTML(rec.subject)}</td>
+                                            <td>${escapeHTML(rec.absentTeacher)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                            <div style="margin-top: 15px; font-weight: bold; text-align: left; font-size: 14px; background: var(--brand-100); padding: 10px; border-radius: 8px;">إجمالي الحصص المسندة: ${records.length} حصة</div>
+                        `;
+                    }
+                }
+                
+                container.innerHTML = html;
+                $("#printCumulativeReportBtn").style.display = 'inline-flex';
+            });
+
+            $("#printCumulativeReportBtn")?.addEventListener("click", () => {
+                const startDate = $("#cumulativeStartDate").value;
+                const endDate = $("#cumulativeEndDate").value;
+                const teacherId = $("#cumulativeTeacherSelect").value;
+                
+                let title = "التقرير التراكمي لحصص الانتظار";
+                if (teacherId !== 'ALL') {
+                    const teacher = state.teachers.find(t => t.id === teacherId);
+                    if (teacher) title += ` - المعلم: ${teacher.name}`;
+                }
+                
+                $("#cumulativePrintSchoolName").textContent = state.school.name || "اسم المدرسة";
+                $("#cumulativePrintTitle").textContent = title;
+                $("#cumulativePrintDateRange").textContent = `للفترة من ${startDate} إلى ${endDate}`;
+                
+                const content = $("#cumulativeReportResults").innerHTML;
+                $("#cumulativePrintContent").innerHTML = content;
+                
+                $("#cumulativePrintReport").setAttribute("aria-hidden", "false");
+                
+                const style = document.createElement("style");
+                style.id = "tempCumulativePrintStyle";
+                style.textContent = \`
+                    @media print {
+                        body > *:not(#cumulativePrintReport) { display: none !important; }
+                        #cumulativePrintReport { display: block !important; }
+                        @page { size: A4 portrait; margin: 15mm 15mm 28mm; }
+                    }
+                \`;
+                document.head.appendChild(style);
+                
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        window.print();
+                        setTimeout(() => {
+                            $("#cumulativePrintReport").setAttribute("aria-hidden", "true");
+                            if (document.getElementById("tempCumulativePrintStyle")) {
+                                document.head.removeChild(document.getElementById("tempCumulativePrintStyle"));
+                            }
+                        }, 500);
+                    });
+                });
+            });
 
             $("#teacherReportChecklist").addEventListener(
                 "change",
