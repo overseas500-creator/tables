@@ -10924,13 +10924,13 @@
                 
                 const style = document.createElement("style");
                 style.id = "tempCumulativePrintStyle";
-                style.textContent = \`
+                style.textContent = `
                     @media print {
                         body > *:not(#cumulativePrintReport) { display: none !important; }
                         #cumulativePrintReport { display: block !important; }
                         @page { size: A4 portrait; margin: 15mm 15mm 28mm; }
                     }
-                \`;
+                `;
                 document.head.appendChild(style);
                 
                 requestAnimationFrame(() => {
