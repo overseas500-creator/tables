@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
     <title>منصة الجداول المدرسية</title><!-- Supabase update forced -->
 
@@ -92,9 +92,21 @@
             box-sizing: border-box;
         }
 
+        html {
+            max-width: 100%;
+            overflow-x: hidden;
+            overflow-x: clip;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+        }
+
         body {
             min-height: 100vh;
+            min-height: 100svh;
+            max-width: 100%;
             margin: 0;
+            overflow-x: hidden;
+            overflow-x: clip;
             color: var(--ink);
             background:
                 radial-gradient(circle at top right, rgba(20, 168, 143, 0.12), transparent 32rem),
@@ -108,9 +120,14 @@
 
         .login-screen {
             min-height: 100vh;
+            min-height: 100svh;
             display: grid;
             place-items: center;
             padding: 24px;
+            padding-top: max(24px, env(safe-area-inset-top));
+            padding-right: max(24px, env(safe-area-inset-right));
+            padding-bottom: max(24px, env(safe-area-inset-bottom));
+            padding-left: max(24px, env(safe-area-inset-left));
         }
 
         .login-card {
@@ -248,6 +265,18 @@
             font: inherit;
         }
 
+        img,
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+        }
+
         button {
             cursor: pointer;
         }
@@ -263,6 +292,10 @@
             width: min(1600px, 100%);
             margin: 0 auto;
             padding: 20px;
+            padding-top: max(20px, env(safe-area-inset-top));
+            padding-right: max(20px, env(safe-area-inset-right));
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            padding-left: max(20px, env(safe-area-inset-left));
         }
 
         .hero {
@@ -481,10 +514,15 @@
 
         .page-grid {
             display: grid;
+            min-width: 0;
+            grid-template-columns: minmax(0, 1fr);
             gap: 20px;
         }
 
         .card {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
             padding: 22px;
             border: 1px solid rgba(220, 227, 236, 0.95);
             border-radius: 24px;
@@ -494,16 +532,22 @@
 
         .card-header {
             display: flex;
+            min-width: 0;
             align-items: center;
             justify-content: space-between;
             gap: 16px;
             margin-bottom: 18px;
         }
 
+        .card-header > * {
+            min-width: 0;
+        }
+
         .card-title {
             margin: 0;
             font-size: 1.15rem;
             font-weight: 900;
+            overflow-wrap: anywhere;
         }
 
         .card-description {
@@ -511,15 +555,19 @@
             font-size: 13px;
             color: var(--muted);
             line-height: 1.7;
+            overflow-wrap: anywhere;
         }
 
         .settings-grid {
             display: grid;
+            min-width: 0;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 18px;
         }
 
         .settings-panel {
+            min-width: 0;
+            max-width: 100%;
             padding: 18px;
             border: 1px solid var(--border);
             border-radius: 20px;
@@ -538,6 +586,7 @@
 
         .form-grid {
             display: grid;
+            min-width: 0;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
         }
@@ -548,6 +597,7 @@
 
         .field {
             display: grid;
+            min-width: 0;
             gap: 7px;
         }
 
@@ -564,6 +614,8 @@
 
         .control {
             width: 100%;
+            min-width: 0;
+            max-width: 100%;
             min-height: 43px;
             padding: 9px 12px;
             color: var(--ink);
@@ -731,6 +783,8 @@
 
         .actions {
             display: flex;
+            min-width: 0;
+            max-width: 100%;
             flex-wrap: wrap;
             align-items: center;
             gap: 8px;
@@ -738,6 +792,7 @@
 
         .btn {
             display: inline-flex;
+            max-width: 100%;
             min-height: 41px;
             align-items: center;
             justify-content: center;
@@ -747,6 +802,8 @@
             font-weight: 900;
             border: 1px solid transparent;
             border-radius: 12px;
+            overflow-wrap: anywhere;
+            white-space: normal;
             transition: transform 150ms ease, opacity 150ms ease, box-shadow 150ms ease;
         }
 
@@ -793,6 +850,7 @@
 
         .data-item {
             display: flex;
+            min-width: 0;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
@@ -800,6 +858,11 @@
             border: 1px solid #e3e8ef;
             border-radius: 14px;
             background: #fff;
+        }
+
+        .data-item > :first-child {
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
 
         .data-item strong {
@@ -830,6 +893,7 @@
             display: block;
             margin-top: 4px;
             color: var(--muted);
+            overflow-wrap: anywhere;
         }
 
         .item-actions {
@@ -879,6 +943,7 @@
             border-radius: 12px;
             background: #effcf9;
             line-height: 1.8;
+            overflow-wrap: anywhere;
         }
 
         .excel-box {
@@ -1003,7 +1068,12 @@
         }
 
         .schedule-wrap {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
             overflow: auto;
+            overscroll-behavior-inline: contain;
+            -webkit-overflow-scrolling: touch;
             border: 1px solid #dce3ec;
             border-radius: 18px;
         }
@@ -1176,6 +1246,7 @@
 
         .absence-layout {
             display: grid;
+            min-width: 0;
             grid-template-columns: 390px minmax(0, 1fr);
             gap: 18px;
         }
@@ -1213,6 +1284,7 @@
 
         .waiting-results {
             display: grid;
+            min-width: 0;
             gap: 12px;
         }
 
@@ -1225,6 +1297,7 @@
 
         .waiting-group-header {
             display: flex;
+            min-width: 0;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
@@ -1233,12 +1306,20 @@
         }
 
         .waiting-group-header strong {
+            min-width: 0;
             font-size: 13px;
+            overflow-wrap: anywhere;
+        }
+
+        .waiting-group-header > * {
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
 
         .waiting-row {
             display: grid;
-            grid-template-columns: 70px 1fr 1fr 1.2fr;
+            min-width: 0;
+            grid-template-columns: 70px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr);
             gap: 8px;
             padding: 11px 14px;
             font-size: 12px;
@@ -1247,16 +1328,29 @@
 
         .waiting-row span {
             color: #64748b;
+            overflow-wrap: anywhere;
         }
 
         .waiting-row b {
             color: #172033;
+            overflow-wrap: anywhere;
+        }
+
+        .table-container {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            overflow: auto !important;
+            overscroll-behavior-inline: contain;
+            -webkit-overflow-scrolling: touch;
         }
 
         .toast {
             position: fixed;
             top: 18px;
+            top: max(18px, env(safe-area-inset-top));
             left: 18px;
+            left: max(18px, env(safe-area-inset-left));
             z-index: 200;
             display: none;
             width: min(420px, calc(100vw - 36px));
@@ -1311,13 +1405,25 @@
             display: none;
         }
 
+        #cumulativeReportResults {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            overflow-x: auto;
+            overscroll-behavior-inline: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
         .report-builder-grid {
             display: grid;
+            min-width: 0;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 16px;
         }
 
         .report-builder-card {
+            min-width: 0;
+            max-width: 100%;
             padding: 18px;
             border: 1px solid #dce3ec;
             border-radius: 18px;
@@ -1424,6 +1530,7 @@
 
         .supervision-layout {
             display: grid;
+            min-width: 0;
             grid-template-columns: minmax(280px, 0.78fr) minmax(0, 1.22fr);
             gap: 18px;
             align-items: start;
@@ -1431,6 +1538,8 @@
 
         .supervision-control-card,
         .supervision-preview-card {
+            min-width: 0;
+            max-width: 100%;
             padding: 18px;
             border: 1px solid #dce3ec;
             border-radius: 18px;
@@ -1524,7 +1633,12 @@
         }
 
         .supervision-table-wrap {
-            overflow: hidden;
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            overflow: auto;
+            overscroll-behavior-inline: contain;
+            -webkit-overflow-scrolling: touch;
             border: 1px solid #94a3b8;
             border-radius: 10px;
             background: #fff;
@@ -1542,6 +1656,7 @@
             height: 36px;
             padding: 7px 10px;
             text-align: center;
+            overflow-wrap: anywhere;
             border: 1px solid #94a3b8;
         }
 
@@ -1607,7 +1722,7 @@
             background: #fff8eb;
         }
 
-        @media (max-width: 1050px) {
+        @media screen and (max-width: 1050px) {
             .hero-layout,
             .absence-layout,
             .supervision-layout {
@@ -1624,15 +1739,43 @@
             }
         }
 
-        @media (max-width: 760px) {
+        @media screen and (max-width: 760px) {
             .app-shell {
+                width: 100%;
+                max-width: 100%;
                 padding: 10px;
+                padding-top: max(10px, env(safe-area-inset-top));
+                padding-right: max(10px, env(safe-area-inset-right));
+                padding-bottom: max(10px, env(safe-area-inset-bottom));
+                padding-left: max(10px, env(safe-area-inset-left));
             }
 
             .hero,
             .card {
+                width: 100%;
+                min-width: 0;
+                max-width: 100%;
                 padding: 17px;
                 border-radius: 20px;
+            }
+
+            .card-header {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .auto-schedule-actions,
+            .schedule-approval-bar {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .card-header > .actions {
+                width: 100%;
+            }
+
+            .card-header > .actions .btn {
+                flex: 1 1 140px;
             }
 
             .settings-grid,
@@ -1652,6 +1795,10 @@
 
             .login-screen {
                 padding: 14px;
+                padding-top: max(14px, env(safe-area-inset-top));
+                padding-right: max(14px, env(safe-area-inset-right));
+                padding-bottom: max(14px, env(safe-area-inset-bottom));
+                padding-left: max(14px, env(safe-area-inset-left));
             }
 
             .account-bar {
@@ -1672,8 +1819,31 @@
                 width: 100%;
             }
 
+            .account-identity,
+            .account-copy {
+                min-width: 0;
+            }
+
+            .account-copy strong,
+            .account-copy span {
+                overflow-wrap: anywhere;
+            }
+
+            .data-item {
+                align-items: flex-start;
+                flex-wrap: wrap;
+            }
+
+            .item-actions {
+                margin-inline-start: auto;
+            }
+
             .waiting-row {
-                grid-template-columns: 55px 1fr;
+                grid-template-columns: 55px minmax(0, 1fr);
+            }
+
+            .waiting-group-header {
+                flex-wrap: wrap;
             }
 
             .report-builder-grid,
@@ -1687,6 +1857,66 @@
 
             .supervision-metrics {
                 grid-template-columns: 1fr;
+            }
+
+            .btn,
+            .login-mode-button,
+            .account-logout,
+            .account-conflict-action,
+            .icon-btn,
+            .delete-lesson,
+            .lesson-template,
+            .absent-chip button,
+            .report-check-option {
+                min-height: 44px;
+                touch-action: manipulation;
+            }
+
+            .icon-btn,
+            .delete-lesson {
+                width: 44px;
+                height: 44px;
+            }
+
+            .scheduled-lesson strong {
+                padding-left: 52px;
+            }
+
+            .absent-chip button {
+                display: inline-flex;
+                min-width: 44px;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .toast {
+                top: 10px;
+                top: max(10px, env(safe-area-inset-top));
+                right: 10px;
+                right: max(10px, env(safe-area-inset-right));
+                left: 10px;
+                left: max(10px, env(safe-area-inset-left));
+                width: auto;
+                max-width: none;
+            }
+        }
+
+        @media screen and (min-width: 761px) and (max-width: 1050px) and (orientation: landscape) {
+            .form-grid.three,
+            .schedule-toolbar {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .card-header {
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (hover: none) {
+            .btn:hover,
+            .feature-shortcut:hover,
+            .assignment-choice:hover {
+                transform: none;
             }
         }
 
