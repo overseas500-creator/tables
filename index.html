@@ -555,7 +555,8 @@
             grid-column: 1 / -1;
         }
 
-        .field label {
+        .field label,
+        .field .assignment-choice-label {
             font-size: 12px;
             font-weight: 800;
             color: #475569;
@@ -576,6 +577,156 @@
         .control:focus {
             border-color: var(--brand);
             box-shadow: 0 0 0 4px rgba(11, 138, 118, 0.11);
+        }
+
+        .assignment-choice-grid {
+            display: grid;
+            min-height: 59px;
+            grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+            gap: 8px;
+            padding: 8px;
+            border: 1px solid #d7e0ea;
+            border-radius: 15px;
+            background: #f7fafc;
+        }
+
+        .assignment-choice-grid--stage {
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        }
+
+        .assignment-choice {
+            position: relative;
+            display: flex;
+            width: 100%;
+            min-width: 0;
+            min-height: 44px;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            color: #334155;
+            text-align: right;
+            border: 1px solid #d3dde8;
+            border-radius: 13px;
+            outline: none;
+            background: #fff;
+            cursor: pointer;
+            transition: border-color 150ms ease, box-shadow 150ms ease,
+                color 150ms ease, background-color 150ms ease,
+                transform 150ms ease;
+        }
+
+        .assignment-choice--stage {
+            justify-content: center;
+            border-radius: 999px;
+        }
+
+        .assignment-choice:hover {
+            color: #075e54;
+            border-color: #83cfc0;
+            transform: translateY(-1px);
+        }
+
+        .assignment-choice:focus-visible {
+            border-color: var(--brand);
+            outline: 3px solid #0f766e;
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(11, 138, 118, 0.13);
+        }
+
+        .assignment-choice.is-selected {
+            color: #075e54;
+            border-color: #62bfae;
+            background: #eaf9f5;
+            box-shadow: 0 7px 18px rgba(11, 138, 118, 0.13);
+        }
+
+        .assignment-choice-icon {
+            display: inline-grid;
+            width: 28px;
+            height: 28px;
+            flex: 0 0 28px;
+            place-items: center;
+            font-size: 15px;
+            border: 1px solid #d8e5e2;
+            border-radius: 9px;
+            background: #f4fbf9;
+        }
+
+        .assignment-choice--subject .assignment-choice-icon {
+            border-color: var(--choice-accent, #d8e5e2);
+            box-shadow: inset 0 -3px 0 var(--choice-accent, var(--brand));
+        }
+
+        .assignment-choice-text {
+            min-width: 0;
+            font-size: 12px;
+            font-weight: 900;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+            white-space: normal;
+        }
+
+        .assignment-choice-check {
+            display: inline-grid;
+            width: 20px;
+            height: 20px;
+            margin-inline-start: auto;
+            flex: 0 0 20px;
+            place-items: center;
+            color: #fff;
+            font-size: 11px;
+            border-radius: 50%;
+            background: var(--brand);
+            opacity: 0;
+            transform: scale(0.7);
+            transition: opacity 150ms ease, transform 150ms ease;
+        }
+
+        .assignment-choice--stage .assignment-choice-check {
+            margin-inline-start: 0;
+        }
+
+        .assignment-choice.is-selected .assignment-choice-check {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .assignment-choice-empty {
+            display: grid;
+            min-height: 41px;
+            grid-column: 1 / -1;
+            place-items: center;
+            padding: 8px;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 800;
+            text-align: center;
+            border: 1px dashed #cbd5e1;
+            border-radius: 11px;
+            background: rgba(255, 255, 255, 0.72);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .assignment-choice,
+            .assignment-choice-check {
+                transition: none;
+            }
+
+            .assignment-choice:hover {
+                transform: none;
+            }
+        }
+
+        @media (forced-colors: active) {
+            .assignment-choice:focus-visible {
+                outline: 2px solid Highlight;
+                outline-offset: 2px;
+            }
+
+            .assignment-choice.is-selected {
+                outline: 2px solid Highlight;
+                outline-offset: 1px;
+            }
         }
 
         .actions {
@@ -2427,18 +2578,39 @@
                             </div>
 
                             <div class="field">
-                                <label for="assignmentStageSelect">المرحلة الدراسية</label>
-                                <select id="assignmentStageSelect" class="control" required></select>
+                                <span id="assignmentStageLabel" class="assignment-choice-label">المرحلة الدراسية</span>
+                                <input id="assignmentStageSelect" type="hidden">
+                                <div
+                                    id="assignmentStageGrid"
+                                    class="assignment-choice-grid assignment-choice-grid--stage"
+                                    role="radiogroup"
+                                    aria-labelledby="assignmentStageLabel"
+                                    aria-required="true"
+                                ></div>
                             </div>
 
                             <div class="field">
-                                <label for="assignmentSubjectSelect">المادة</label>
-                                <select id="assignmentSubjectSelect" class="control" required></select>
+                                <span id="assignmentSubjectLabel" class="assignment-choice-label">المادة</span>
+                                <input id="assignmentSubjectSelect" type="hidden">
+                                <div
+                                    id="assignmentSubjectGrid"
+                                    class="assignment-choice-grid"
+                                    role="radiogroup"
+                                    aria-labelledby="assignmentSubjectLabel"
+                                    aria-required="true"
+                                ></div>
                             </div>
 
                             <div class="field">
-                                <label for="assignmentClassSelect">الصف والفصل</label>
-                                <select id="assignmentClassSelect" class="control" required></select>
+                                <span id="assignmentClassLabel" class="assignment-choice-label">الصف والفصل</span>
+                                <input id="assignmentClassSelect" type="hidden">
+                                <div
+                                    id="assignmentClassGrid"
+                                    class="assignment-choice-grid"
+                                    role="radiogroup"
+                                    aria-labelledby="assignmentClassLabel"
+                                    aria-required="true"
+                                ></div>
                             </div>
 
                             <div class="field">
@@ -3924,6 +4096,30 @@
                 assignment: null
             };
 
+            const assignmentSelection = {
+                stageId: "",
+                subjectId: "",
+                classId: ""
+            };
+
+            const ASSIGNMENT_CHOICE_CONFIG = {
+                stage: {
+                    stateKey: "stageId",
+                    inputSelector: "#assignmentStageSelect",
+                    gridSelector: "#assignmentStageGrid"
+                },
+                subject: {
+                    stateKey: "subjectId",
+                    inputSelector: "#assignmentSubjectSelect",
+                    gridSelector: "#assignmentSubjectGrid"
+                },
+                class: {
+                    stateKey: "classId",
+                    inputSelector: "#assignmentClassSelect",
+                    gridSelector: "#assignmentClassGrid"
+                }
+            };
+
             function resetTransientState() {
                 activeClassId = state.classes[0]?.id || "";
                 selectedAbsentTeacherIds = state.waitingData?.absentTeacherIds || [];
@@ -3939,6 +4135,10 @@
 
                 Object.keys(editing).forEach((key) => {
                     editing[key] = null;
+                });
+
+                Object.keys(assignmentSelection).forEach((key) => {
+                    assignmentSelection[key] = "";
                 });
             }
 
@@ -6156,6 +6356,288 @@
                 }
             }
 
+            function assignmentSubjectIcon(subject) {
+                const name = normalizeArabic(subject?.name);
+
+                if (isArtSubject(subject)) return "🎨";
+                if (name.includes("رياض")) return "➗";
+                if (
+                    name.includes("علوم") ||
+                    name.includes("فيزيا") ||
+                    name.includes("كيميا") ||
+                    name.includes("احيا")
+                ) return "🔬";
+                if (
+                    name.includes("انجليزي") ||
+                    name.includes("english")
+                ) return "🔤";
+                if (
+                    name.includes("حاسب") ||
+                    name.includes("رقمي") ||
+                    name.includes("تقنيه")
+                ) return "💻";
+                if (
+                    name.includes("اسلام") ||
+                    name.includes("توحيد") ||
+                    name.includes("فقه") ||
+                    name.includes("حديث") ||
+                    name.includes("قران")
+                ) return "📖";
+                if (
+                    name.includes("عربي") ||
+                    name.includes("لغتي")
+                ) return "📚";
+                if (
+                    name.includes("بدني") ||
+                    name.includes("رياضه")
+                ) return "⚽";
+                if (
+                    name.includes("اجتماع") ||
+                    name.includes("جغراف") ||
+                    name.includes("تاريخ")
+                ) return "🌍";
+
+                return "📘";
+            }
+
+            function assignmentChoiceIcon(kind, item) {
+                if (kind === "stage") return "🎓";
+                if (kind === "class") return "🏫";
+                return assignmentSubjectIcon(item);
+            }
+
+            function setAssignmentSelection(kind, value) {
+                const config = ASSIGNMENT_CHOICE_CONFIG[kind];
+
+                if (!config) {
+                    return;
+                }
+
+                const normalizedValue = String(value || "");
+                assignmentSelection[config.stateKey] = normalizedValue;
+
+                const input = $(config.inputSelector);
+
+                if (input) {
+                    input.value = normalizedValue;
+                }
+            }
+
+            function selectedAssignmentChoice(kind) {
+                const config = ASSIGNMENT_CHOICE_CONFIG[kind];
+
+                return config
+                    ? assignmentSelection[config.stateKey]
+                    : "";
+            }
+
+            function renderAssignmentChoiceGrid(
+                kind,
+                items,
+                selectedId,
+                emptyMessage
+            ) {
+                const config = ASSIGNMENT_CHOICE_CONFIG[kind];
+                const container = config
+                    ? $(config.gridSelector)
+                    : null;
+
+                if (!container) {
+                    return;
+                }
+
+                if (!items.length) {
+                    container.setAttribute("aria-disabled", "true");
+                    container.innerHTML = `
+                        <div
+                            class="assignment-choice-empty"
+                            role="status"
+                            aria-live="polite"
+                        >${escapeHTML(emptyMessage)}</div>
+                    `;
+                    return;
+                }
+
+                container.removeAttribute("aria-disabled");
+
+                const hasSelectedItem = items.some(
+                    (item) => item.id === selectedId
+                );
+
+                container.innerHTML = items
+                    .map((item, index) => {
+                        const selected = item.id === selectedId;
+                        const accentStyle =
+                            kind === "subject"
+                                ? ` style="--choice-accent:${safeColor(
+                                      item.color
+                                  )}"`
+                                : "";
+
+                        return `
+                            <button
+                                type="button"
+                                role="radio"
+                                class="assignment-choice assignment-choice--${kind}${
+                                    selected ? " is-selected" : ""
+                                }"
+                                data-assignment-choice="${kind}"
+                                data-value="${escapeHTML(item.id)}"
+                                aria-checked="${selected ? "true" : "false"}"
+                                tabindex="${
+                                    selected ||
+                                    (!hasSelectedItem && index === 0)
+                                        ? "0"
+                                        : "-1"
+                                }"
+                                title="${escapeHTML(item.name)}"
+                                ${accentStyle}
+                            >
+                                <span class="assignment-choice-icon" aria-hidden="true">
+                                    ${assignmentChoiceIcon(kind, item)}
+                                </span>
+                                <span class="assignment-choice-text">${escapeHTML(
+                                    item.name
+                                )}</span>
+                                <span class="assignment-choice-check" aria-hidden="true">✓</span>
+                            </button>
+                        `;
+                    })
+                    .join("");
+            }
+
+            function renderAssignmentStageChoices(preferredStageId) {
+                const stages = [...state.stages].sort((a, b) =>
+                    a.name.localeCompare(b.name, "ar")
+                );
+
+                const requestedStageId =
+                    preferredStageId !== undefined
+                        ? preferredStageId
+                        : selectedAssignmentChoice("stage");
+
+                const stageId = stages.some(
+                    (stage) => stage.id === requestedStageId
+                )
+                    ? requestedStageId
+                    : "";
+
+                setAssignmentSelection("stage", stageId);
+                renderAssignmentChoiceGrid(
+                    "stage",
+                    stages,
+                    stageId,
+                    "لا توجد مراحل دراسية مسجلة"
+                );
+            }
+
+            function updateAssignmentChoiceGrid(kind, selectedId) {
+                const config = ASSIGNMENT_CHOICE_CONFIG[kind];
+                const container = config
+                    ? $(config.gridSelector)
+                    : null;
+
+                if (!container) {
+                    return;
+                }
+
+                container
+                    .querySelectorAll("[data-assignment-choice]")
+                    .forEach((button) => {
+                        const selected =
+                            button.dataset.value === selectedId;
+
+                        button.classList.toggle(
+                            "is-selected",
+                            selected
+                        );
+                        button.setAttribute(
+                            "aria-checked",
+                            selected ? "true" : "false"
+                        );
+                        button.tabIndex = selected ? 0 : -1;
+                    });
+            }
+
+            function chooseAssignmentOption(kind, value) {
+                if (kind === "stage") {
+                    const stageChanged =
+                        selectedAssignmentChoice("stage") !== value;
+
+                    setAssignmentSelection("stage", value);
+                    updateAssignmentChoiceGrid("stage", value);
+
+                    if (stageChanged) {
+                        setAssignmentSelection("subject", "");
+                        setAssignmentSelection("class", "");
+                        renderAssignmentDependentSelects("", "");
+                    }
+
+                    return;
+                }
+
+                setAssignmentSelection(kind, value);
+                updateAssignmentChoiceGrid(kind, value);
+            }
+
+            function handleAssignmentChoiceKeydown(event) {
+                const handledKeys = [
+                    "ArrowLeft",
+                    "ArrowRight",
+                    "ArrowUp",
+                    "ArrowDown",
+                    "Home",
+                    "End"
+                ];
+
+                if (!handledKeys.includes(event.key)) {
+                    return;
+                }
+
+                const currentButton = event.target.closest(
+                    "[data-assignment-choice]"
+                );
+
+                if (!currentButton) {
+                    return;
+                }
+
+                const buttons = [
+                    ...event.currentTarget.querySelectorAll(
+                        "[data-assignment-choice]"
+                    )
+                ];
+                const currentIndex = buttons.indexOf(currentButton);
+
+                if (currentIndex < 0 || !buttons.length) {
+                    return;
+                }
+
+                let nextIndex = currentIndex;
+
+                if (event.key === "Home") {
+                    nextIndex = 0;
+                } else if (event.key === "End") {
+                    nextIndex = buttons.length - 1;
+                } else {
+                    const isRtl =
+                        document.documentElement.dir === "rtl";
+                    const movesForward =
+                        event.key === "ArrowDown" ||
+                        (event.key === "ArrowLeft" && isRtl) ||
+                        (event.key === "ArrowRight" && !isRtl);
+                    const delta = movesForward ? 1 : -1;
+
+                    nextIndex =
+                        (currentIndex + delta + buttons.length) %
+                        buttons.length;
+                }
+
+                event.preventDefault();
+                buttons[nextIndex].focus();
+                buttons[nextIndex].click();
+            }
+
             function renderStats() {
                 $("#stageCount").textContent = state.stages.length;
                 $("#classCount").textContent = state.classes.length;
@@ -6181,7 +6663,7 @@
                 preferredClassId,
                 preferredSubjectId
             ) {
-                const stageId = $("#assignmentStageSelect").value;
+                const stageId = selectedAssignmentChoice("stage");
 
                 const classes = state.classes
                     .filter((item) => item.stageId === stageId)
@@ -6191,18 +6673,45 @@
                     .filter((item) => item.stageId === stageId)
                     .sort((a, b) => a.name.localeCompare(b.name, "ar"));
 
-                populateSelect(
-                    $("#assignmentClassSelect"),
+                const requestedClassId =
+                    preferredClassId !== undefined
+                        ? preferredClassId
+                        : selectedAssignmentChoice("class");
+                const requestedSubjectId =
+                    preferredSubjectId !== undefined
+                        ? preferredSubjectId
+                        : selectedAssignmentChoice("subject");
+
+                const classId = classes.some(
+                    (item) => item.id === requestedClassId
+                )
+                    ? requestedClassId
+                    : "";
+                const subjectId = subjects.some(
+                    (item) => item.id === requestedSubjectId
+                )
+                    ? requestedSubjectId
+                    : "";
+
+                setAssignmentSelection("class", classId);
+                setAssignmentSelection("subject", subjectId);
+
+                renderAssignmentChoiceGrid(
+                    "class",
                     classes,
-                    stageId ? "اختر الصف والفصل" : "اختر المرحلة أولاً",
-                    preferredClassId
+                    classId,
+                    stageId
+                        ? "لا توجد فصول مسجلة لهذه المرحلة"
+                        : "اختر المرحلة أولاً"
                 );
 
-                populateSelect(
-                    $("#assignmentSubjectSelect"),
+                renderAssignmentChoiceGrid(
+                    "subject",
                     subjects,
-                    stageId ? "اختر المادة" : "اختر المرحلة أولاً",
-                    preferredSubjectId
+                    subjectId,
+                    stageId
+                        ? "لا توجد مواد مسجلة لهذه المرحلة"
+                        : "اختر المرحلة أولاً"
                 );
             }
 
@@ -6260,12 +6769,7 @@
                     "اختر المعلم"
                 );
 
-                populateSelect(
-                    $("#assignmentStageSelect"),
-                    stages,
-                    "اختر المرحلة"
-                );
-
+                renderAssignmentStageChoices();
                 renderAssignmentDependentSelects();
 
                 const assignedTeacherIds = new Set(
@@ -7353,10 +7857,13 @@
             function resetAssignmentEditor() {
                 editing.assignment = null;
                 $("#assignmentTeacherSelect").value = "";
-                $("#assignmentStageSelect").value = "";
                 $("#assignmentWeeklyPeriodsInput").value = "4";
                 $("#saveAssignmentButton").textContent = "إضافة التكليف";
-                renderAssignmentDependentSelects();
+                setAssignmentSelection("stage", "");
+                setAssignmentSelection("subject", "");
+                setAssignmentSelection("class", "");
+                renderAssignmentStageChoices("");
+                renderAssignmentDependentSelects("", "");
             }
 
             $("#basicForm").addEventListener("submit", (event) => {
@@ -7637,18 +8144,43 @@
                 showToast("تم حفظ بيانات المعلم.");
             });
 
-            $("#assignmentStageSelect").addEventListener(
-                "change",
-                () => renderAssignmentDependentSelects()
-            );
+            Object.keys(ASSIGNMENT_CHOICE_CONFIG).forEach((kind) => {
+                const container = $(
+                    ASSIGNMENT_CHOICE_CONFIG[kind].gridSelector
+                );
+
+                if (!container) {
+                    return;
+                }
+
+                container.addEventListener("click", (event) => {
+                    const button = event.target.closest(
+                        "[data-assignment-choice]"
+                    );
+
+                    if (!button || !container.contains(button)) {
+                        return;
+                    }
+
+                    chooseAssignmentOption(
+                        button.dataset.assignmentChoice,
+                        button.dataset.value
+                    );
+                });
+
+                container.addEventListener(
+                    "keydown",
+                    handleAssignmentChoiceKeydown
+                );
+            });
 
             $("#assignmentForm").addEventListener("submit", (event) => {
                 event.preventDefault();
 
                 const teacherId = $("#assignmentTeacherSelect").value;
-                const stageId = $("#assignmentStageSelect").value;
-                const subjectId = $("#assignmentSubjectSelect").value;
-                const classId = $("#assignmentClassSelect").value;
+                const stageId = selectedAssignmentChoice("stage");
+                const subjectId = selectedAssignmentChoice("subject");
+                const classId = selectedAssignmentChoice("class");
                 const weeklyPeriods = Number(
                     $("#assignmentWeeklyPeriodsInput").value
                 );
@@ -7950,8 +8482,9 @@
                         editing.assignment = id;
                         $("#assignmentTeacherSelect").value =
                             assignment.teacherId;
-                        $("#assignmentStageSelect").value =
-                            schoolClass?.stageId || "";
+                        renderAssignmentStageChoices(
+                            schoolClass?.stageId || ""
+                        );
 
                         renderAssignmentDependentSelects(
                             assignment.classId,
