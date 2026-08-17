@@ -2590,26 +2590,24 @@
                             </div>
 
                             <div class="field">
-                                <span id="assignmentSubjectLabel" class="assignment-choice-label">المادة</span>
+                                <span id="assignmentSubjectLabel" class="assignment-choice-label">المادة (اختيار متعدد، مطلوب)</span>
                                 <input id="assignmentSubjectSelect" type="hidden">
                                 <div
                                     id="assignmentSubjectGrid"
                                     class="assignment-choice-grid"
-                                    role="radiogroup"
+                                    role="group"
                                     aria-labelledby="assignmentSubjectLabel"
-                                    aria-required="true"
                                 ></div>
                             </div>
 
                             <div class="field">
-                                <span id="assignmentClassLabel" class="assignment-choice-label">الصف والفصل</span>
+                                <span id="assignmentClassLabel" class="assignment-choice-label">الصف والفصل (اختيار متعدد، مطلوب)</span>
                                 <input id="assignmentClassSelect" type="hidden">
                                 <div
                                     id="assignmentClassGrid"
                                     class="assignment-choice-grid"
-                                    role="radiogroup"
+                                    role="group"
                                     aria-labelledby="assignmentClassLabel"
-                                    aria-required="true"
                                 ></div>
                             </div>
 
@@ -2625,7 +2623,10 @@
                                     required
                                 >
                                 <small class="hint">
-                                    المادة العادية من 1 إلى 6 حصص؛ وعند اختيار 6 تُكرر حصة واحدة في يوم واحد فقط.
+                                    يُطبّق العدد على كل مادة مع كل فصل محدد؛ فاختيار مادتين وفصلين ينشئ 4 تكليفات. المادة العادية من 1 إلى 6 حصص.
+                                </small>
+                                <small id="assignmentBatchSummary" class="hint" aria-live="polite">
+                                    اختر مادة واحدة وفصلاً واحداً على الأقل.
                                 </small>
                             </div>
 
@@ -4098,8 +4099,8 @@
 
             const assignmentSelection = {
                 stageId: "",
-                subjectId: "",
-                classId: ""
+                subjectIds: [],
+                classIds: []
             };
 
             const ASSIGNMENT_CHOICE_CONFIG = {
@@ -4109,14 +4110,16 @@
                     gridSelector: "#assignmentStageGrid"
                 },
                 subject: {
-                    stateKey: "subjectId",
+                    stateKey: "subjectIds",
                     inputSelector: "#assignmentSubjectSelect",
-                    gridSelector: "#assignmentSubjectGrid"
+                    gridSelector: "#assignmentSubjectGrid",
+                    multiple: true
                 },
                 class: {
-                    stateKey: "classId",
+                    stateKey: "classIds",
                     inputSelector: "#assignmentClassSelect",
-                    gridSelector: "#assignmentClassGrid"
+                    gridSelector: "#assignmentClassGrid",
+                    multiple: true
                 }
             };
 
@@ -4137,9 +4140,9 @@
                     editing[key] = null;
                 });
 
-                Object.keys(assignmentSelection).forEach((key) => {
-                    assignmentSelection[key] = "";
-                });
+                assignmentSelection.stageId = "";
+                assignmentSelection.subjectIds = [];
+                assignmentSelection.classIds = [];
             }
 
             function setCloudStatus(message, status = "pending") {
@@ -6413,13 +6416,29 @@
                     return;
                 }
 
-                const normalizedValue = String(value || "");
+                const normalizedValue = config.multiple
+                    ? [
+                          ...new Set(
+                              (Array.isArray(value)
+                                  ? value
+                                  : value
+                                    ? [value]
+                                    : []
+                              )
+                                  .map((item) => String(item || ""))
+                                  .filter(Boolean)
+                          )
+                      ]
+                    : String(value || "");
+
                 assignmentSelection[config.stateKey] = normalizedValue;
 
                 const input = $(config.inputSelector);
 
                 if (input) {
-                    input.value = normalizedValue;
+                    input.value = config.multiple
+                        ? normalizedValue.join(",")
+                        : normalizedValue;
                 }
             }
 
@@ -6431,10 +6450,26 @@
                     : "";
             }
 
+            function selectedAssignmentChoices(kind) {
+                const config = ASSIGNMENT_CHOICE_CONFIG[kind];
+
+                if (!config) {
+                    return [];
+                }
+
+                const value = assignmentSelection[config.stateKey];
+
+                if (config.multiple) {
+                    return Array.isArray(value) ? [...value] : [];
+                }
+
+                return value ? [value] : [];
+            }
+
             function renderAssignmentChoiceGrid(
                 kind,
                 items,
-                selectedId,
+                selectedValues,
                 emptyMessage
             ) {
                 const config = ASSIGNMENT_CHOICE_CONFIG[kind];
@@ -6460,13 +6495,22 @@
 
                 container.removeAttribute("aria-disabled");
 
+                const selectedIds = new Set(
+                    config.multiple
+                        ? Array.isArray(selectedValues)
+                            ? selectedValues
+                            : []
+                        : selectedValues
+                          ? [selectedValues]
+                          : []
+                );
                 const hasSelectedItem = items.some(
-                    (item) => item.id === selectedId
+                    (item) => selectedIds.has(item.id)
                 );
 
                 container.innerHTML = items
                     .map((item, index) => {
-                        const selected = item.id === selectedId;
+                        const selected = selectedIds.has(item.id);
                         const accentStyle =
                             kind === "subject"
                                 ? ` style="--choice-accent:${safeColor(
@@ -6477,14 +6521,18 @@
                         return `
                             <button
                                 type="button"
-                                role="radio"
                                 class="assignment-choice assignment-choice--${kind}${
                                     selected ? " is-selected" : ""
                                 }"
                                 data-assignment-choice="${kind}"
                                 data-value="${escapeHTML(item.id)}"
-                                aria-checked="${selected ? "true" : "false"}"
+                                ${
+                                    config.multiple
+                                        ? `aria-pressed="${selected ? "true" : "false"}"`
+                                        : `role="radio" aria-checked="${selected ? "true" : "false"}"`
+                                }
                                 tabindex="${
+                                    config.multiple ||
                                     selected ||
                                     (!hasSelectedItem && index === 0)
                                         ? "0"
@@ -6531,7 +6579,7 @@
                 );
             }
 
-            function updateAssignmentChoiceGrid(kind, selectedId) {
+            function updateAssignmentChoiceGrid(kind, selectedValues) {
                 const config = ASSIGNMENT_CHOICE_CONFIG[kind];
                 const container = config
                     ? $(config.gridSelector)
@@ -6541,22 +6589,114 @@
                     return;
                 }
 
+                const selectedIds = new Set(
+                    config.multiple
+                        ? Array.isArray(selectedValues)
+                            ? selectedValues
+                            : []
+                        : selectedValues
+                          ? [selectedValues]
+                          : []
+                );
+
                 container
                     .querySelectorAll("[data-assignment-choice]")
                     .forEach((button) => {
-                        const selected =
-                            button.dataset.value === selectedId;
+                        const selected = selectedIds.has(
+                            button.dataset.value
+                        );
 
                         button.classList.toggle(
                             "is-selected",
                             selected
                         );
-                        button.setAttribute(
-                            "aria-checked",
-                            selected ? "true" : "false"
-                        );
-                        button.tabIndex = selected ? 0 : -1;
+
+                        if (config.multiple) {
+                            button.setAttribute(
+                                "aria-pressed",
+                                selected ? "true" : "false"
+                            );
+                            button.tabIndex = 0;
+                        } else {
+                            button.setAttribute(
+                                "aria-checked",
+                                selected ? "true" : "false"
+                            );
+                            button.tabIndex = selected ? 0 : -1;
+                        }
                     });
+            }
+
+            function formatAssignmentCount(count) {
+                if (count === 1) return "تكليف واحد";
+                if (count === 2) return "تكليفين";
+                if (count >= 3 && count <= 10) {
+                    return `${count} تكليفات`;
+                }
+
+                return `${count} تكليفاً`;
+            }
+
+            function formatPeriodCount(count) {
+                if (count === 1) return "حصة واحدة";
+                if (count === 2) return "حصتين";
+                if (count >= 3 && count <= 10) {
+                    return `${count} حصص`;
+                }
+
+                return `${count} حصة`;
+            }
+
+            function updateAssignmentBatchSummary() {
+                const button = $("#saveAssignmentButton");
+                const summary = $("#assignmentBatchSummary");
+
+                if (!button || !summary) {
+                    return;
+                }
+
+                if (editing.assignment) {
+                    button.textContent = "حفظ التعديل";
+                    summary.textContent =
+                        "وضع التعديل يغيّر تكليفاً واحداً فقط.";
+                    return;
+                }
+
+                const subjectCount =
+                    selectedAssignmentChoices("subject").length;
+                const classCount =
+                    selectedAssignmentChoices("class").length;
+                const assignmentCount = subjectCount * classCount;
+                const weeklyPeriods = Number(
+                    $("#assignmentWeeklyPeriodsInput")?.value
+                );
+
+                button.textContent =
+                    assignmentCount > 1
+                        ? `إضافة ${formatAssignmentCount(
+                              assignmentCount
+                          )}`
+                        : "إضافة التكليف";
+
+                if (!assignmentCount) {
+                    summary.textContent =
+                        "اختر مادة واحدة وفصلاً واحداً على الأقل.";
+                    return;
+                }
+
+                const validWeeklyPeriods =
+                    Number.isInteger(weeklyPeriods) && weeklyPeriods > 0;
+                const assignmentCountText =
+                    formatAssignmentCount(assignmentCount);
+                const weeklyPeriodsText =
+                    formatPeriodCount(weeklyPeriods);
+                const totalPeriods = assignmentCount * weeklyPeriods;
+                const totalPeriodsText =
+                    formatPeriodCount(totalPeriods);
+
+                summary.textContent = validWeeklyPeriods
+                    ? `سيتم إنشاء ${assignmentCountText}، بواقع ${weeklyPeriodsText} لكل تكليف، وإجمالي ${totalPeriodsText} على حمل المعلم.`
+                    : `سيتم إنشاء ${assignmentCountText} بعد إدخال عدد حصص صحيح.`;
             }
 
             function chooseAssignmentOption(kind, value) {
@@ -6568,16 +6708,24 @@
                     updateAssignmentChoiceGrid("stage", value);
 
                     if (stageChanged) {
-                        setAssignmentSelection("subject", "");
-                        setAssignmentSelection("class", "");
-                        renderAssignmentDependentSelects("", "");
+                        setAssignmentSelection("subject", []);
+                        setAssignmentSelection("class", []);
+                        renderAssignmentDependentSelects([], []);
                     }
 
                     return;
                 }
 
-                setAssignmentSelection(kind, value);
-                updateAssignmentChoiceGrid(kind, value);
+                const currentValues = selectedAssignmentChoices(kind);
+                const nextValues = editing.assignment
+                    ? [value]
+                    : currentValues.includes(value)
+                      ? currentValues.filter((item) => item !== value)
+                      : [...currentValues, value];
+
+                setAssignmentSelection(kind, nextValues);
+                updateAssignmentChoiceGrid(kind, nextValues);
+                updateAssignmentBatchSummary();
             }
 
             function handleAssignmentChoiceKeydown(event) {
@@ -6635,7 +6783,12 @@
 
                 event.preventDefault();
                 buttons[nextIndex].focus();
-                buttons[nextIndex].click();
+
+                const kind = currentButton.dataset.assignmentChoice;
+
+                if (!ASSIGNMENT_CHOICE_CONFIG[kind]?.multiple) {
+                    buttons[nextIndex].click();
+                }
             }
 
             function renderStats() {
@@ -6660,8 +6813,8 @@
             }
 
             function renderAssignmentDependentSelects(
-                preferredClassId,
-                preferredSubjectId
+                preferredClassIds,
+                preferredSubjectIds
             ) {
                 const stageId = selectedAssignmentChoice("stage");
 
@@ -6673,33 +6826,51 @@
                     .filter((item) => item.stageId === stageId)
                     .sort((a, b) => a.name.localeCompare(b.name, "ar"));
 
-                const requestedClassId =
-                    preferredClassId !== undefined
-                        ? preferredClassId
-                        : selectedAssignmentChoice("class");
-                const requestedSubjectId =
-                    preferredSubjectId !== undefined
-                        ? preferredSubjectId
-                        : selectedAssignmentChoice("subject");
+                const requestedClassIds =
+                    preferredClassIds !== undefined
+                        ? Array.isArray(preferredClassIds)
+                            ? preferredClassIds
+                            : preferredClassIds
+                              ? [preferredClassIds]
+                              : []
+                        : selectedAssignmentChoices("class");
+                const requestedSubjectIds =
+                    preferredSubjectIds !== undefined
+                        ? Array.isArray(preferredSubjectIds)
+                            ? preferredSubjectIds
+                            : preferredSubjectIds
+                              ? [preferredSubjectIds]
+                              : []
+                        : selectedAssignmentChoices("subject");
 
-                const classId = classes.some(
-                    (item) => item.id === requestedClassId
-                )
-                    ? requestedClassId
-                    : "";
-                const subjectId = subjects.some(
-                    (item) => item.id === requestedSubjectId
-                )
-                    ? requestedSubjectId
-                    : "";
+                const validClassIds = new Set(
+                    classes.map((item) => item.id)
+                );
+                const validSubjectIds = new Set(
+                    subjects.map((item) => item.id)
+                );
+                const classIds = [
+                    ...new Set(
+                        requestedClassIds.filter((id) =>
+                            validClassIds.has(id)
+                        )
+                    )
+                ];
+                const subjectIds = [
+                    ...new Set(
+                        requestedSubjectIds.filter((id) =>
+                            validSubjectIds.has(id)
+                        )
+                    )
+                ];
 
-                setAssignmentSelection("class", classId);
-                setAssignmentSelection("subject", subjectId);
+                setAssignmentSelection("class", classIds);
+                setAssignmentSelection("subject", subjectIds);
 
                 renderAssignmentChoiceGrid(
                     "class",
                     classes,
-                    classId,
+                    classIds,
                     stageId
                         ? "لا توجد فصول مسجلة لهذه المرحلة"
                         : "اختر المرحلة أولاً"
@@ -6708,11 +6879,13 @@
                 renderAssignmentChoiceGrid(
                     "subject",
                     subjects,
-                    subjectId,
+                    subjectIds,
                     stageId
                         ? "لا توجد مواد مسجلة لهذه المرحلة"
                         : "اختر المرحلة أولاً"
                 );
+
+                updateAssignmentBatchSummary();
             }
 
             function renderSelects() {
@@ -7858,12 +8031,12 @@
                 editing.assignment = null;
                 $("#assignmentTeacherSelect").value = "";
                 $("#assignmentWeeklyPeriodsInput").value = "4";
-                $("#saveAssignmentButton").textContent = "إضافة التكليف";
                 setAssignmentSelection("stage", "");
-                setAssignmentSelection("subject", "");
-                setAssignmentSelection("class", "");
+                setAssignmentSelection("subject", []);
+                setAssignmentSelection("class", []);
                 renderAssignmentStageChoices("");
-                renderAssignmentDependentSelects("", "");
+                renderAssignmentDependentSelects([], []);
+                updateAssignmentBatchSummary();
             }
 
             $("#basicForm").addEventListener("submit", (event) => {
@@ -8174,40 +8347,70 @@
                 );
             });
 
+            $("#assignmentWeeklyPeriodsInput").addEventListener(
+                "input",
+                updateAssignmentBatchSummary
+            );
+
             $("#assignmentForm").addEventListener("submit", (event) => {
                 event.preventDefault();
 
                 const teacherId = $("#assignmentTeacherSelect").value;
                 const stageId = selectedAssignmentChoice("stage");
-                const subjectId = selectedAssignmentChoice("subject");
-                const classId = selectedAssignmentChoice("class");
+                const subjectIds = selectedAssignmentChoices("subject");
+                const classIds = selectedAssignmentChoices("class");
                 const weeklyPeriods = Number(
                     $("#assignmentWeeklyPeriodsInput").value
                 );
+                const wasEditingAssignment = Boolean(
+                    editing.assignment
+                );
 
                 const teacher = teacherById(teacherId);
-                const subject = subjectById(subjectId);
-                const schoolClass = classById(classId);
+                const subjects = subjectIds
+                    .map((subjectId) => subjectById(subjectId))
+                    .filter(Boolean);
+                const schoolClasses = classIds
+                    .map((classId) => classById(classId))
+                    .filter(Boolean);
 
                 if (
                     !teacher ||
-                    !subject ||
-                    !schoolClass ||
-                    !stageId
+                    !stageId ||
+                    !subjectIds.length ||
+                    !classIds.length ||
+                    subjects.length !== subjectIds.length ||
+                    schoolClasses.length !== classIds.length
                 ) {
                     showToast(
-                        "اختر المعلم والمرحلة والمادة والصف والفصل.",
+                        "اختر المعلم والمرحلة ومادة واحدة وفصلاً واحداً على الأقل.",
                         "error"
                     );
                     return;
                 }
 
                 if (
-                    subject.stageId !== stageId ||
-                    schoolClass.stageId !== stageId
+                    subjects.some(
+                        (subject) => subject.stageId !== stageId
+                    ) ||
+                    schoolClasses.some(
+                        (schoolClass) =>
+                            schoolClass.stageId !== stageId
+                    )
                 ) {
                     showToast(
-                        "يجب أن تنتمي المادة والصف والفصل إلى المرحلة نفسها.",
+                        "يجب أن تنتمي جميع المواد والفصول المختارة إلى المرحلة نفسها.",
+                        "error"
+                    );
+                    return;
+                }
+
+                if (
+                    editing.assignment &&
+                    (subjectIds.length !== 1 || classIds.length !== 1)
+                ) {
+                    showToast(
+                        "وضع التعديل يخص تكليفاً واحداً؛ ألغِ التعديل للإضافة الجماعية.",
                         "error"
                     );
                     return;
@@ -8224,39 +8427,71 @@
                     return;
                 }
 
-                if (
-                    !isArtSubject(subject) &&
-                    weeklyPeriods > MAX_REGULAR_WEEKLY_PERIODS
-                ) {
+                const invalidRegularSubjects = subjects.filter(
+                    (subject) =>
+                        !isArtSubject(subject) &&
+                        weeklyPeriods > MAX_REGULAR_WEEKLY_PERIODS
+                );
+
+                if (invalidRegularSubjects.length) {
                     showToast(
-                        "المادة العادية لا يمكن أن تتجاوز 6 حصص أسبوعياً؛ وعند اختيار 6 يكون التكرار في يوم واحد فقط.",
+                        `لا يمكن أن تتجاوز المواد العادية 6 حصص أسبوعياً: ${invalidRegularSubjects
+                            .map((subject) => subject.name)
+                            .join("، ")}.`,
                         "error"
                     );
                     return;
                 }
 
-                if (
-                    isArtSubject(subject) &&
-                    (weeklyPeriods % 2 !== 0 ||
-                        weeklyPeriods > DAYS.length * 2)
-                ) {
+                const invalidArtSubjects = subjects.filter(
+                    (subject) =>
+                        isArtSubject(subject) &&
+                        (weeklyPeriods % 2 !== 0 ||
+                            weeklyPeriods > DAYS.length * 2)
+                );
+
+                if (invalidArtSubjects.length) {
                     showToast(
-                        "التربية الفنية تحتاج عدداً زوجياً لا يتجاوز 10 حصص أسبوعياً.",
+                        `المواد الفنية تحتاج عدداً زوجياً لا يتجاوز 10 حصص أسبوعياً: ${invalidArtSubjects
+                            .map((subject) => subject.name)
+                            .join("، ")}.`,
                         "error"
                     );
                     return;
                 }
 
-                const duplicate = state.teachingAssignments.some(
-                    (assignment) =>
-                        assignment.id !== editing.assignment &&
-                        assignment.classId === classId &&
-                        assignment.subjectId === subjectId
+                const plannedAssignments = subjectIds.flatMap(
+                    (subjectId) =>
+                        classIds.map((classId) => ({
+                            subjectId,
+                            classId
+                        }))
+                );
+
+                const duplicate = plannedAssignments.find(
+                    (planned) =>
+                        state.teachingAssignments.some(
+                            (assignment) =>
+                                assignment.id !== editing.assignment &&
+                                assignment.classId === planned.classId &&
+                                assignment.subjectId === planned.subjectId
+                        )
                 );
 
                 if (duplicate) {
+                    const duplicateSubject = subjectById(
+                        duplicate.subjectId
+                    );
+                    const duplicateClass = classById(
+                        duplicate.classId
+                    );
+
                     showToast(
-                        "هذه المادة مرتبطة مسبقاً بمعلم لهذا الصف والفصل.",
+                        `لا يمكن حفظ الدفعة؛ ${
+                            duplicateSubject?.name || "المادة"
+                        } مرتبطة مسبقاً بالفصل ${
+                            duplicateClass?.name || "المحدد"
+                        }.`,
                         "error"
                     );
                     return;
@@ -8273,7 +8508,8 @@
                             (total, assignment) =>
                                 total + Number(assignment.weeklyPeriods),
                             0
-                        ) + weeklyPeriods;
+                        ) +
+                    plannedAssignments.length * weeklyPeriods;
 
                 const teacherCapacity = Math.min(
                     Number(teacher.maxLessons || 24),
@@ -8288,34 +8524,63 @@
                     return;
                 }
 
-                const classAssignedPeriods =
-                    state.teachingAssignments
-                        .filter(
-                            (assignment) =>
-                                assignment.id !== editing.assignment &&
-                                assignment.classId === classId
-                        )
-                        .reduce(
-                            (total, assignment) =>
-                                total + Number(assignment.weeklyPeriods),
-                            0
-                        ) + weeklyPeriods;
+                const overloadedClass = schoolClasses.find(
+                    (schoolClass) => {
+                        const assignedPeriods =
+                            state.teachingAssignments
+                                .filter(
+                                    (assignment) =>
+                                        assignment.id !==
+                                            editing.assignment &&
+                                        assignment.classId ===
+                                            schoolClass.id
+                                )
+                                .reduce(
+                                    (total, assignment) =>
+                                        total +
+                                        Number(
+                                            assignment.weeklyPeriods
+                                        ),
+                                    0
+                                );
+                        const addedPeriods =
+                            plannedAssignments.filter(
+                                (planned) =>
+                                    planned.classId === schoolClass.id
+                            ).length * weeklyPeriods;
 
-                if (
-                    classAssignedPeriods >
-                    DAYS.length * PERIODS.length
-                ) {
+                        return (
+                            assignedPeriods + addedPeriods >
+                            DAYS.length * PERIODS.length
+                        );
+                    }
+                );
+
+                if (overloadedClass) {
                     showToast(
-                        "مجموع حصص الصف والفصل يتجاوز سعة الجدول الأسبوعية (35 حصة).",
+                        `مجموع حصص الفصل ${overloadedClass.name} يتجاوز سعة الجدول الأسبوعية (35 حصة).`,
                         "error"
                     );
                     return;
                 }
 
+                let nextAssignments;
+
                 if (editing.assignment) {
                     const assignment = assignmentById(
                         editing.assignment
                     );
+
+                    if (!assignment) {
+                        showToast(
+                            "تعذر العثور على التكليف المطلوب تعديله.",
+                            "error"
+                        );
+                        return;
+                    }
+
+                    const [{ subjectId, classId }] =
+                        plannedAssignments;
 
                     const scheduledPeriods = assignmentScheduledPeriods(
                         assignment
@@ -8342,22 +8607,36 @@
                         return;
                     }
 
-                    Object.assign(assignment, {
-                        teacherId,
-                        subjectId,
-                        classId,
-                        weeklyPeriods
-                    });
+                    nextAssignments = state.teachingAssignments.map(
+                        (item) =>
+                            item.id === assignment.id
+                                ? {
+                                      ...item,
+                                      teacherId,
+                                      subjectId,
+                                      classId,
+                                      weeklyPeriods
+                                  }
+                                : item
+                    );
                 } else {
-                    state.teachingAssignments.push({
-                        id: uid("assignment"),
-                        teacherId,
-                        subjectId,
-                        classId,
-                        weeklyPeriods
-                    });
+                    const createdAssignments = plannedAssignments.map(
+                        ({ subjectId, classId }) => ({
+                            id: uid("assignment"),
+                            teacherId,
+                            subjectId,
+                            classId,
+                            weeklyPeriods
+                        })
+                    );
+
+                    nextAssignments = [
+                        ...state.teachingAssignments,
+                        ...createdAssignments
+                    ];
                 }
 
+                state.teachingAssignments = nextAssignments;
                 state.teachingAssignments =
                     repairTeachingAssignments(state);
                 state.schedule = repairSchedule(state);
@@ -8365,7 +8644,14 @@
                 resetAssignmentEditor();
                 saveState();
                 renderAll();
-                showToast("تم حفظ تكليف التدريس.");
+                showToast(
+                    wasEditingAssignment ||
+                        plannedAssignments.length === 1
+                        ? "تم حفظ تكليف التدريس."
+                        : `تم حفظ ${formatAssignmentCount(
+                              plannedAssignments.length
+                          )} للتدريس دفعة واحدة.`
+                );
             });
 
             $("#cancelStageEditButton").addEventListener(
