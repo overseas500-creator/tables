@@ -7398,10 +7398,13 @@
                                 </div>
                             `).join("");
 
+                            const totalStagePeriods = subjects.reduce((sum, sub) => sum + Number(sub.weeklyPeriods || 0), 0);
+                            
                             return `
                                 <div style="background: #f8f9fa; border: 1px solid #eaeaea; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                                    <h4 style="margin-top: 0; margin-bottom: 12px; color: #333; border-bottom: 2px solid #ddd; padding-bottom: 8px; font-size: 1.1em;">
-                                        🎓 ${escapeHTML(stageName)}
+                                    <h4 style="margin-top: 0; margin-bottom: 12px; color: #333; border-bottom: 2px solid #ddd; padding-bottom: 8px; font-size: 1.1em; display: flex; justify-content: space-between; align-items: center;">
+                                        <span>🎓 ${escapeHTML(stageName)}</span>
+                                        <span class="assignment-pill" style="font-size: 0.8em; padding: 4px 10px; margin: 0; background: #e3f2fd; color: #0d47a1;">${totalStagePeriods} حصة للمرحلة</span>
                                     </h4>
                                     <div>
                                         ${subjectsHTML}
