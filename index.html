@@ -7325,60 +7325,92 @@
                     return;
                 }
 
-                list.innerHTML = state.subjects
-                    .map((subject) => `
-                        <div class="data-item">
-                            <div>
-                                <strong>
-                                    <span
-                                        style="
-                                            display:inline-block;
-                                            width:10px;
-                                            height:10px;
-                                            margin-left:6px;
-                                            border-radius:50%;
-                                            background:${safeColor(subject.color)};
-                                        "
-                                    ></span>
-                                    ${escapeHTML(subject.name)}
-                                </strong>
+                const subjectsByStage = {};
+                state.subjects.forEach(subject => {
+                    const stageId = subject.stageId || "unassigned";
+                    if (!subjectsByStage[stageId]) {
+                        subjectsByStage[stageId] = [];
+                    }
+                    subjectsByStage[stageId].push(subject);
+                });
 
-                                <small>
-                                    ${escapeHTML(
-                                        stageById(subject.stageId)?.name ||
-                                            "مرحلة غير محددة"
-                                    )}
-                                    — ${subject.weeklyPeriods || 0} حصة أسبوعية
-                                    ${
-                                        isArtSubject(subject)
-                                            ? " — كتلة مزدوجة"
-                                            : ""
-                                    }
-                                </small>
-                            </div>
+                const sortedStageIds = Object.keys(subjectsByStage).sort((a, b) => {
+                    const stageA = stageById(a);
+                    const stageB = stageById(b);
+                    if (!stageA) return 1;
+                    if (!stageB) return -1;
+                    return stageA.name.localeCompare(stageB.name, "ar");
+                });
 
-                            <div class="item-actions">
-                                <button
-                                    type="button"
-                                    class="icon-btn"
-                                    data-entity="subject"
-                                    data-action="edit"
-                                    data-id="${escapeHTML(subject.id)}"
-                                    title="تعديل"
-                                >✏️</button>
+                list.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start;">
+                        ${sortedStageIds.map(stageId => {
+                            const stage = stageById(stageId);
+                            const stageName = stage ? stage.name : "مرحلة غير محددة";
+                            const subjects = subjectsByStage[stageId];
+                            
+                            const subjectsHTML = subjects.map(subject => `
+                                <div class="data-item" style="margin-bottom: 8px; padding: 10px; border-radius: 6px; border: 1px solid #ddd; background: #fff;">
+                                    <div>
+                                        <strong>
+                                            <span
+                                                style="
+                                                    display:inline-block;
+                                                    width:10px;
+                                                    height:10px;
+                                                    margin-left:6px;
+                                                    border-radius:50%;
+                                                    background:${safeColor(subject.color)};
+                                                "
+                                            ></span>
+                                            ${escapeHTML(subject.name)}
+                                        </strong>
 
-                                <button
-                                    type="button"
-                                    class="icon-btn delete"
-                                    data-entity="subject"
-                                    data-action="delete"
-                                    data-id="${escapeHTML(subject.id)}"
-                                    title="حذف"
-                                >🗑️</button>
-                            </div>
-                        </div>
-                    `)
-                    .join("");
+                                        <small style="display: block; margin-top: 4px; color: #666;">
+                                            ${subject.weeklyPeriods || 0} حصة أسبوعية
+                                            ${
+                                                isArtSubject(subject)
+                                                    ? " — كتلة مزدوجة"
+                                                    : ""
+                                            }
+                                        </small>
+                                    </div>
+
+                                    <div class="item-actions">
+                                        <button
+                                            type="button"
+                                            class="icon-btn"
+                                            data-entity="subject"
+                                            data-action="edit"
+                                            data-id="${escapeHTML(subject.id)}"
+                                            title="تعديل"
+                                        >✏️</button>
+
+                                        <button
+                                            type="button"
+                                            class="icon-btn delete"
+                                            data-entity="subject"
+                                            data-action="delete"
+                                            data-id="${escapeHTML(subject.id)}"
+                                            title="حذف"
+                                        >🗑️</button>
+                                    </div>
+                                </div>
+                            `).join("");
+
+                            return `
+                                <div style="background: #f8f9fa; border: 1px solid #eaeaea; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                    <h4 style="margin-top: 0; margin-bottom: 12px; color: #333; border-bottom: 2px solid #ddd; padding-bottom: 8px; font-size: 1.1em;">
+                                        🎓 ${escapeHTML(stageName)}
+                                    </h4>
+                                    <div>
+                                        ${subjectsHTML}
+                                    </div>
+                                </div>
+                            `;
+                        }).join("")}
+                    </div>
+                `;
             }
 
             function renderTeachers() {
