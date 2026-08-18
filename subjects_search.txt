@@ -1,0 +1,420 @@
+707: .assignment-choice--subject .assignment-choice-icon {
+1053: border-right: 5px solid var(--subject-color, #0b8a76);
+1193: border-right: 6px solid var(--subject-color, #0b8a76);
+2440: إدارة المراحل والفصول والمواد والمعلمين، وبناء الجدول بالسحب الذكي،
+2533: إدارة كاملة للمراحل والفصول والمواد والمعلمين مع التعديل والحذف والاستيراد.
+2608: <h3>المواد الدراسية</h3>
+2610: <form id="subjectForm" class="form-grid">
+2612: <label for="subjectStageSelect">المرحلة</label>
+2613: <select id="subjectStageSelect" class="control" required></select>
+2617: <label for="subjectNameInput">اسم المادة</label>
+2619: id="subjectNameInput"
+2628: <label for="subjectColorInput">لون المادة</label>
+2630: id="subjectColorInput"
+2640: <button id="saveSubjectButton" class="btn btn-primary" type="submit">
+2641: إضافة المادة
+2644: <button id="cancelSubjectEditButton" class="btn btn-secondary" type="button">
+2652: مادة «التربية الفنية» تُعامل تلقائياً ككتلة مزدوجة من حصتين متتاليتين.
+2655: <div id="subjectList" class="data-list"></div>
+2659: <h3>التكرار الذكي للمرحلة</h3>
+2674: نسخ الفصول والمواد دون تكرار
+2682: يتم تجاهل أي فصل أو مادة موجودة مسبقاً بالاسم نفسه في المرحلة المستهدفة.
+2796: <h3>الخطوة الأولى: ربط المعلم بالمادة والصف والفصل</h3>
+2823: <span id="assignmentSubjectLabel" class="assignment-choice-label">المادة (اختيار متعدد، مطلوب)</span
+2824: <input id="assignmentSubjectSelect" type="hidden">
+2826: id="assignmentSubjectGrid"
+2829: aria-labelledby="assignmentSubjectLabel"
+2856: يُطبّق العدد على كل مادة مع كل فصل محدد؛ فاختيار مادتين وفصلين ينشئ 4 تكليفات. المادة العادية من 1 إ
+2859: اختر مادة واحدة وفصلاً واحداً على الأقل.
+2906: <strong>المادة ذات 6 حصص</strong>
+2907: <span>تُوزع 2،1،1،1،1؛ ويكون التكرار في يوم واحد فقط.</span>
+2995: للسحب: اختر المعلم ثم اسحب المادة. وللهاتف: اضغط المادة ثم اضغط الحصة الفارغة.
+3090: <p>كل معلم في صفحة مستقلة، وتعرض الخلايا اسم الفصل والمادة.</p>
+3110: <p>كل فصل في صفحة مستقلة، وتعرض الخلايا اسم المادة والمعلم.</p>
+3141: المعلمون — الفصول مع المواد
+3387: "لا يسمح بتكرار المادة في اليوم نفسه إلا لمادة ذات 6 حصص، وبحد حصة ثانية في يوم واحد فقط.";
+3600: function isArtSubject(subject) {
+3601: const name = normalizeArabic(subject?.name);
+3610: function allowsOneSubjectRepeat(assignment, subject) {
+3612: !isArtSubject(subject) &&
+3618: function teachingMeetingCount(assignment, subject) {
+3619: const duration = isArtSubject(subject) ? 2 : 1;
+3658: subjects: [
+3660: id: "subject-arabic",
+3666: id: "subject-math",
+3672: id: "subject-science",
+3678: id: "subject-art",
+3684: id: "subject-english",
+3734: subjectId: "subject-arabic",
+3741: subjectId: "subject-math",
+3748: subjectId: "subject-science",
+3755: subjectId: "subject-art",
+3762: subjectId: "subject-arabic",
+3769: subjectId: "subject-math",
+3776: subjectId: "subject-science",
+3783: subjectId: "subject-art",
+3790: subjectId: "subject-arabic",
+3797: subjectId: "subject-math",
+3804: subjectId: "subject-science",
+3811: subjectId: "subject-art",
+3824: subjectId: "subject-arabic",
+3833: subjectId: "subject-math",
+3842: subjectId: "subject-art",
+3851: subjectId: "subject-science",
+3872: const subject = candidateState.subjects.find(
+3873: (item) => item.id === lesson.subjectId
+3882: !subject ||
+3884: schoolClass.stageId !== subject.stageId
+3889: const key = `${lesson.classId}|${lesson.subjectId}`;
+3890: const duration = isArtSubject(subject) ? 2 : 1;
+3903: subjectId: lesson.subjectId,
+3914: const seenClassSubjects = new Set();
+3923: const subject = candidateState.subjects.find(
+3924: (item) => item.id === rawAssignment.subjectId
+3935: const uniqueKey = `${rawAssignment.classId}|${rawAssignment.subjectId}`;
+3939: !subject ||
+3941: subject.stageId !== schoolClass.stageId ||
+3945: seenClassSubjects.has(uniqueKey)
+3950: seenClassSubjects.add(uniqueKey);
+3955: subjectId: rawAssignment.subjectId,
+3983: subjects: Array.isArray(raw.subjects)
+3984: ? raw.subjects
+3985: : fallback.subjects,
+4159: const subjectIds = new Set(
+4160: candidateState.subjects.map((item) => item.id)
+4169: const subjectDayCounts = new Map();
+4170: const repeatedSubjectDays = new Map();
+4178: `${assignment.classId}|${assignment.subjectId}|${assignment.teacherId}`,
+4187: !subjectIds.has(rawLesson.subjectId) ||
+4194: const subject = candidateState.subjects.find(
+4195: (item) => item.id === rawLesson.subjectId
+4198: const duration = isArtSubject(subject) ? 2 : 1;
+4201: `${rawLesson.classId}|${rawLesson.subjectId}|${rawLesson.teacherId}`
+4232: const subjectDayKey =
+4233: `${rawLesson.classId}|${rawLesson.subjectId}|${rawLesson.day}`;
+4235: const subjectDayCount = Number(
+4236: subjectDayCounts.get(subjectDayKey) || 0
+4239: const repeatAllowed = allowsOneSubjectRepeat(
+4241: subject
+4244: const repeatedDay = repeatedSubjectDays.get(
+4259: (!repeatAllowed && subjectDayCount >= 1) ||
+4260: subjectDayCount >= 2 ||
+4261: (subjectDayCount === 1 &&
+4275: subjectDayCounts.set(
+4276: subjectDayKey,
+4277: subjectDayCount + 1
+4280: if (subjectDayCount === 1) {
+4281: repeatedSubjectDays.set(
+4325: subject: null,
+4332: subjectIds: [],
+4342: subject: {
+4343: stateKey: "subjectIds",
+4344: inputSelector: "#assignmentSubjectSelect",
+4345: gridSelector: "#assignmentSubjectGrid",
+4374: assignmentSelection.subjectIds = [];
+5466: function subjectById(id) {
+5467: return state.subjects.find((item) => item.id === id);
+5482: subjectId,
+5488: assignment.subjectId === subjectId &&
+5498: return isArtSubject(subjectById(lesson.subjectId))
+5521: fields: ["className", "subjectName"],
+5528: fields: ["subjectName", "teacherName"],
+5542: fields: ["className", "subjectName"],
+5543: title: "الجدول العام للمعلمين — الفصول والمواد",
+5556: const subject = candidateState.subjects.find(
+5557: (item) => item.id === lesson.subjectId
+5560: if (subject) {
+5561: return isArtSubject(subject) ? 2 : 1;
+5580: const subject = candidateState.subjects.find(
+5581: (item) => item.id === lesson.subjectId
+5587: subjectName: subject?.name || "[مادة محذوفة]"
+5594: subjectId: lesson.subjectId,
+5595: color: safeColor(subject?.color),
+5805: subjects: stableSemanticList(
+5806: candidateState.subjects || [],
+5807: (subject) => [
+5808: subject.id,
+5809: subject.stageId,
+5810: subject.name || ""
+5817: assignment.subjectId,
+5826: lesson.subjectId,
+6541: lesson.subjectId === assignment.subjectId &&
+6592: function assignmentSubjectIcon(subject) {
+6593: const name = normalizeArabic(subject?.name);
+6595: if (isArtSubject(subject)) return "🎨";
+6639: return assignmentSubjectIcon(item);
+6745: kind === "subject"
+6895: const subjectCount =
+6896: selectedAssignmentChoices("subject").length;
+6899: const assignmentCount = subjectCount * classCount;
+6913: "اختر مادة واحدة وفصلاً واحداً على الأقل.";
+6941: setAssignmentSelection("subject", []);
+7047: preferredSubjectIds
+7055: const subjects = state.subjects
+7067: const requestedSubjectIds =
+7068: preferredSubjectIds !== undefined
+7069: ? Array.isArray(preferredSubjectIds)
+7070: ? preferredSubjectIds
+7071: : preferredSubjectIds
+7072: ? [preferredSubjectIds]
+7074: : selectedAssignmentChoices("subject");
+7079: const validSubjectIds = new Set(
+7080: subjects.map((item) => item.id)
+7089: const subjectIds = [
+7091: requestedSubjectIds.filter((id) =>
+7092: validSubjectIds.has(id)
+7098: setAssignmentSelection("subject", subjectIds);
+7110: "subject",
+7111: subjects,
+7112: subjectIds,
+7114: ? "لا توجد مواد مسجلة لهذه المرحلة"
+7136: "#subjectStageSelect",
+7221: const subjectCount = state.subjects.filter(
+7229: <small>${classCount} فصل — ${subjectCount} مادة</small>
+7301: function renderSubjects() {
+7302: const list = $("#subjectList");
+7304: if (!state.subjects.length) {
+7306: '<div class="empty-state">لا توجد مواد مسجلة.</div>';
+7310: list.innerHTML = state.subjects
+7311: .map((subject) => `
+7322: background:${safeColor(subject.color)};
+7325: ${escapeHTML(subject.name)}
+7330: stageById(subject.stageId)?.name ||
+7334: isArtSubject(subject)
+7345: data-entity="subject"
+7347: data-id="${escapeHTML(subject.id)}"
+7354: data-entity="subject"
+7356: data-id="${escapeHTML(subject.id)}"
+7465: (subjectById(first.subjectId)?.name || "").localeCompare(
+7466: subjectById(second.subjectId)?.name || "",
+7476: const subject = subjectById(assignment.subjectId);
+7487: ${escapeHTML(subject?.name || "")} —
+7532: اختر معلماً مكلفاً بهذا الفصل لعرض مواده.
+7546: '<div class="empty-state" style="width:100%;">لا توجد مواد مرتبطة بهذا المعلم والفصل.</div>';
+7552: const subject = subjectById(assignment.subjectId);
+7562: const duration = isArtSubject(subject) ? 2 : 1;
+7571: style="--subject-color:${safeColor(subject?.color)};"
+7575: : "اسحب المادة إلى الجدول"
+7579: ${escapeHTML(subject?.name || "")}
+7584: isArtSubject(subject)
+7657: const subject = subjectById(lesson.subjectId);
+7683: style="--subject-color:${safeColor(
+7684: subject?.color
+7698: subject?.name || "مادة محذوفة"
+8205: renderSubjects();
+8242: function resetSubjectEditor() {
+8243: editing.subject = null;
+8244: $("#subjectNameInput").value = "";
+8245: $("#subjectColorInput").value = "#0b8a76";
+8246: $("#saveSubjectButton").textContent = "إضافة المادة";
+8265: setAssignmentSelection("subject", []);
+8382: $("#subjectForm").addEventListener("submit", (event) => {
+8385: const stageId = $("#subjectStageSelect").value;
+8386: const name = $("#subjectNameInput").value.trim();
+8388: $("#subjectColorInput").value
+8392: showToast("اختر المرحلة وأدخل اسم المادة.", "error");
+8396: const duplicate = state.subjects.some(
+8397: (subject) =>
+8398: subject.id !== editing.subject &&
+8399: subject.stageId === stageId &&
+8400: normalizeArabic(subject.name) ===
+8406: "هذه المادة موجودة مسبقاً في المرحلة.",
+8413: editing.subject &&
+8414: subjectById(editing.subject)?.stageId !== stageId &&
+8417: assignment.subjectId === editing.subject
+8421: "احذف تكليفات هذه المادة قبل نقلها إلى مرحلة أخرى.",
+8427: if (editing.subject) {
+8428: const subject = subjectById(editing.subject);
+8429: subject.stageId = stageId;
+8430: subject.name = name;
+8431: subject.color = color;
+8433: state.subjects.push({
+8434: id: uid("subject"),
+8443: resetSubjectEditor();
+8446: showToast("تم حفظ المادة.");
+8590: const subjectIds = selectedAssignmentChoices("subject");
+8600: const subjects = subjectIds
+8601: .map((subjectId) => subjectById(subjectId))
+8610: !subjectIds.length ||
+8612: subjects.length !== subjectIds.length ||
+8616: "اختر المعلم والمرحلة ومادة واحدة وفصلاً واحداً على الأقل.",
+8623: subjects.some(
+8624: (subject) => subject.stageId !== stageId
+8632: "يجب أن تنتمي جميع المواد والفصول المختارة إلى المرحلة نفسها.",
+8640: (subjectIds.length !== 1 || classIds.length !== 1)
+8660: const invalidRegularSubjects = subjects.filter(
+8661: (subject) =>
+8662: !isArtSubject(subject) &&
+8666: if (invalidRegularSubjects.length) {
+8668: `لا يمكن أن تتجاوز المواد العادية 6 حصص أسبوعياً: ${invalidRegularSubjects
+8669: .map((subject) => subject.name)
+8676: const invalidArtSubjects = subjects.filter(
+8677: (subject) =>
+8678: isArtSubject(subject) &&
+8683: if (invalidArtSubjects.length) {
+8685: `المواد الفنية تحتاج عدداً زوجياً لا يتجاوز 10 حصص أسبوعياً: ${invalidArtSubjects
+8686: .map((subject) => subject.name)
+8693: const plannedAssignments = subjectIds.flatMap(
+8694: (subjectId) =>
+8696: subjectId,
+8707: assignment.subjectId === planned.subjectId
+8712: const duplicateSubject = subjectById(
+8713: duplicate.subjectId
+8721: duplicateSubject?.name || "المادة"
+8812: const [{ subjectId, classId }] =
+8821: assignment.subjectId !== subjectId ||
+8826: "احذف حصص هذا التكليف من الجدول قبل تغيير المعلم أو المادة أو الفصل.",
+8846: subjectId,
+8854: ({ subjectId, classId }) => ({
+8857: subjectId,
+8897: $("#cancelSubjectEditButton").addEventListener(
+8899: resetSubjectEditor
+8949: if (entity === "subject") {
+8950: const subject = subjectById(id);
+8952: editing.subject = id;
+8953: $("#subjectStageSelect").value =
+8954: subject.stageId;
+8956: $("#subjectNameInput").value =
+8957: subject.name;
+8959: $("#subjectColorInput").value =
+8960: safeColor(subject.color);
+8962: $("#saveSubjectButton").textContent =
+9007: assignment.subjectId
+9035: state.subjects.some(
+9041: "احذف الفصول والمواد التابعة للمرحلة أولاً.",
+9080: if (entity === "subject") {
+9083: "سيتم حذف المادة وتكليفاتها من جميع الجداول. هل تريد المتابعة؟"
+9089: state.subjects = state.subjects.filter(
+9094: (lesson) => lesson.subjectId !== id
+9100: assignment.subjectId !== id
+9159: lesson.subjectId === assignment.subjectId &&
+9199: let copiedSubjects = 0;
+9226: state.subjects
+9230: .forEach((sourceSubject) => {
+9231: const exists = state.subjects.some(
+9236: sourceSubject.name
+9241: state.subjects.push({
+9242: id: uid("subject"),
+9244: name: sourceSubject.name,
+9245: color: sourceSubject.color
+9248: copiedSubjects += 1;
+9256: `تم نسخ ${copiedClasses} فصل و${copiedSubjects} مادة.`
+9441: const subjects = new Map(
+9442: candidateState.subjects.map((item) => [item.id, item])
+9449: const seenClassSubjects = new Set();
+9456: const subject = subjects.get(assignment.subjectId);
+9461: const uniqueKey = `${assignment.classId}|${assignment.subjectId}`;
+9463: if (!teacher || !subject || !schoolClass) {
+9465: "يوجد تكليف يشير إلى معلم أو مادة أو فصل محذوف."
+9470: if (subject.stageId !== schoolClass.stageId) {
+9472: `مرحلة المادة «${subject.name}» لا تطابق مرحلة الفصل «${schoolClass.name}».`
+9476: if (seenClassSubjects.has(uniqueKey)) {
+9478: `المادة «${subject.name}» مرتبطة بأكثر من معلم في الفصل «${schoolClass.name}».`
+9481: seenClassSubjects.add(uniqueKey);
+9488: `عدد حصص «${subject.name}» في «${schoolClass.name}» غير صالح.`
+9494: !isArtSubject(subject) &&
+9498: `المادة «${subject.name}» في «${schoolClass.name}» تتجاوز 6 حصص أسبوعياً.`
+9503: isArtSubject(subject) &&
+9522: ) + teachingMeetingCount(assignment, subject)
+9673: const subjects = new Map(
+9674: candidateState.subjects.map((item) => [item.id, item])
+9684: `${assignment.classId}|${assignment.subjectId}|${assignment.teacherId}`,
+9692: const subjectDayCounts = new Map();
+9693: const repeatedSubjectDays = new Map();
+9699: `${lesson.classId}|${lesson.subjectId}|${lesson.teacherId}`
+9701: const subject = subjects.get(lesson.subjectId);
+9702: const expectedDuration = isArtSubject(subject) ? 2 : 1;
+9707: if (!assignment || !subject) {
+9728: const subjectDayKey =
+9729: `${lesson.classId}|${lesson.subjectId}|${lesson.day}`;
+9731: const subjectDayCount = Number(
+9732: subjectDayCounts.get(subjectDayKey) || 0
+9735: const repeatAllowed = allowsOneSubjectRepeat(
+9737: subject
+9740: const repeatedDay = repeatedSubjectDays.get(
+9745: (!repeatAllowed && subjectDayCount >= 1) ||
+9746: subjectDayCount >= 2 ||
+9747: (subjectDayCount === 1 &&
+9754: "تكررت المادة للفصل نفسه أكثر من المسموح في اليوم؛ التكرار متاح مرة واحدة فقط للمادة ذات 6 حصص."
+9758: subjectDayCounts.set(
+9759: subjectDayKey,
+9760: subjectDayCount + 1
+9763: if (subjectDayCount === 1) {
+9764: repeatedSubjectDays.set(
+9831: const subject = subjects.get(assignment.subjectId);
+9833: if (allowsOneSubjectRepeat(assignment, subject)) {
+9836: subjectDayCounts.get(
+9837: `${assignment.classId}|${assignment.subjectId}|${day.id}`
+9852: "يجب توزيع المادة ذات 6 حصص على الأيام بالنمط 2،1،1،1،1."
+9908: const subjectMap = new Map(
+9909: candidateState.subjects.map((item) => [item.id, item])
+9914: const subject = subjectMap.get(
+9915: assignment.subjectId
+9917: const duration = isArtSubject(subject) ? 2 : 1;
+9922: allowsDailyRepeat: allowsOneSubjectRepeat(
+9924: subject
+9937: const subjectDayCounts = new Map();
+9938: const repeatedSubjectDays = new Map();
+10034: function hasRequiredSubjectDistribution() {
+10043: subjectDayCounts.get(
+10044: `${assignment.classId}|${assignment.subjectId}|${day.id}`
+10108: const subjectDayKey =
+10109: `${assignment.classId}|${assignment.subjectId}|${day.id}`;
+10111: const subjectDayCount = Number(
+10112: subjectDayCounts.get(subjectDayKey) || 0
+10116: repeatedSubjectDays.get(
+10122: subjectDayCount >= 1) ||
+10123: subjectDayCount >= 2 ||
+10124: (subjectDayCount === 1 &&
+10284: const subjectDayKey =
+10285: `${assignment.classId}|${assignment.subjectId}|${candidate.day}`;
+10286: const subjectDayCount = Number(
+10287: subjectDayCounts.get(subjectDayKey) || 0
+10300: subjectDayCounts,
+10301: subjectDayKey,
+10305: if (subjectDayCount === 1) {
+10306: repeatedSubjectDays.set(
+10348: subjectId: assignment.subjectId,
+10355: const subjectDayKey =
+10356: `${assignment.classId}|${assignment.subjectId}|${candidate.day}`;
+10357: const subjectDayCount = Number(
+10358: subjectDayCounts.get(subjectDayKey) || 0
+10375: subjectDayCounts,
+10376: subjectDayKey,
+10380: if (subjectDayCount === 2) {
+10381: repeatedSubjectDays.delete(assignment.id);
+10433: if (!hasRequiredSubjectDistribution()) {
+10645: subjectId: assignment.subjectId,
+10653: "تم تحديد المادة. اضغط الحصة المطلوبة أو اسحب المادة إليها.";
+10685: let subjectId = payload.subjectId;
+10702: subjectId = sourceLesson.subjectId;
+10707: const subject = subjectById(subjectId);
+10710: if (!subject || !teacher) {
+10713: message: "المادة أو المعلم غير صالح."
+10719: subjectId,
+10727: "يجب ربط المعلم بالمادة والصف والفصل قبل إضافة الحصة."
+10731: const duration = isArtSubject(subject) ? 2 : 1;
+10755: const sameDaySubjectLessons = state.schedule.filter(
+10760: lesson.subjectId === subjectId
+10763: const repeatAllowed = allowsOneSubjectRepeat(
+10765: subject
+10768: const repeatedSubjectDay = DAYS.find((item) => {
+10779: lesson.subjectId === subjectId
+10785: ? sameDaySubjectLessons.length >= 2 ||
+10786: (sameDaySubjectLessons.length === 1 &&
+10787: Boolean(repeatedSubjectDay))
+10788: : sameDaySubjectLessons.length >= 1;
+10881: subjectId,
+10907: "تم حفظ الحصة. يمكنك سحب مادة أخرى أو نقل الحصة الموجودة.";
+11273: subjectId: lesson.subjectId,
+11627: subject:
+11628: subjectById(
+11629: lesson.subjectId
+11681: <span>المادة: <b>${escapeHTML(
+11682: row.subject
+11935: subject: row.subject,
+11956: <th>المادة</th>
+11966: <td>${escapeHTML(rec.subject)}</td>
+12189: cell.dataset.subjectColor = backgroundColor;
+12349: "تُعرض الحصص بالألوان المعتمدة للمواد، وتظهر التربية الفنية ككتلة متصلة.";
+13004: ["subject", "المادة"],

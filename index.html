@@ -2635,6 +2635,22 @@
                             </div>
 
                             <div class="field">
+                                <label for="subjectWeeklyPeriodsInput">عدد الحصص الأسبوعية</label>
+                                <input
+                                    id="subjectWeeklyPeriodsInput"
+                                    class="control"
+                                    type="number"
+                                    min="0"
+                                    max="10"
+                                    value="0"
+                                    required
+                                >
+                                <small class="hint">
+                                    المادة العادية حتى 6 حصص. التربية الفنية حتى 10 حصص (زوجي).
+                                </small>
+                            </div>
+
+                            <div class="field">
                                 <label>&nbsp;</label>
                                 <div class="actions">
                                     <button id="saveSubjectButton" class="btn btn-primary" type="submit">
@@ -2847,13 +2863,11 @@
                                     id="assignmentWeeklyPeriodsInput"
                                     class="control"
                                     type="number"
-                                    min="1"
-                                    max="10"
-                                    value="4"
-                                    required
+                                    value="0"
+                                    readonly
                                 >
                                 <small class="hint">
-                                    يُطبّق العدد على كل مادة مع كل فصل محدد؛ فاختيار مادتين وفصلين ينشئ 4 تكليفات. المادة العادية من 1 إلى 6 حصص.
+                                    يتم حساب إجمالي الحصص تلقائياً بناءً على المواد المختارة.
                                 </small>
                                 <small id="assignmentBatchSummary" class="hint" aria-live="polite">
                                     اختر مادة واحدة وفصلاً واحداً على الأقل.
@@ -6892,14 +6906,17 @@
                     return;
                 }
 
-                const subjectCount =
-                    selectedAssignmentChoices("subject").length;
-                const classCount =
-                    selectedAssignmentChoices("class").length;
+                const subjectIds = selectedAssignmentChoices("subject");
+                const subjectCount = subjectIds.length;
+                const classCount = selectedAssignmentChoices("class").length;
                 const assignmentCount = subjectCount * classCount;
-                const weeklyPeriods = Number(
-                    $("#assignmentWeeklyPeriodsInput")?.value
-                );
+
+                const selectedSubjectsWeeklyPeriods = subjectIds.reduce((sum, id) => sum + Number(subjectById(id)?.weeklyPeriods || 0), 0);
+                
+                const weeklyPeriodsInput = $("#assignmentWeeklyPeriodsInput");
+                if (weeklyPeriodsInput) {
+                    weeklyPeriodsInput.value = selectedSubjectsWeeklyPeriods;
+                }
 
                 button.textContent =
                     assignmentCount > 1
@@ -6914,30 +6931,27 @@
                     return;
                 }
 
-                const validWeeklyPeriods =
-                    Number.isInteger(weeklyPeriods) && weeklyPeriods > 0;
+                const totalPeriods = classCount * selectedSubjectsWeeklyPeriods;
                 const assignmentCountText =
                     formatAssignmentCount(assignmentCount);
-                const weeklyPeriodsText =
-                    formatPeriodCount(weeklyPeriods);
-                const totalPeriods = assignmentCount * weeklyPeriods;
                 const totalPeriodsText =
                     formatPeriodCount(totalPeriods);
 
-                summary.textContent = validWeeklyPeriods
-                    ? `سيتم إنشاء ${assignmentCountText}، بواقع ${weeklyPeriodsText} لكل تكليف، وإجمالي ${totalPeriodsText} على حمل المعلم.`
-                    : `سيتم إنشاء ${assignmentCountText} بعد إدخال عدد حصص صحيح.`;
+                summary.textContent = totalPeriods > 0
+                    ? `سيتم إنشاء ${assignmentCountText}، بإجمالي ${totalPeriodsText} على حمل المعلم.`
+                    : `سيتم إنشاء ${assignmentCountText}، ولكن لم يتم تحديد حصص للمواد المختارة.`;
             }
 
             function chooseAssignmentOption(kind, value) {
                 if (kind === "stage") {
-                    const stageChanged =
-                        selectedAssignmentChoice("stage") !== value;
+                    const currentStage = selectedAssignmentChoice("stage");
+                    const isTogglingOff = currentStage === value;
+                    const nextValue = isTogglingOff ? "" : value;
 
-                    setAssignmentSelection("stage", value);
-                    updateAssignmentChoiceGrid("stage", value);
+                    setAssignmentSelection("stage", nextValue);
+                    updateAssignmentChoiceGrid("stage", nextValue);
 
-                    if (stageChanged) {
+                    if (isTogglingOff || currentStage !== value) {
                         setAssignmentSelection("subject", []);
                         setAssignmentSelection("class", []);
                         renderAssignmentDependentSelects([], []);
@@ -6947,11 +6961,15 @@
                 }
 
                 const currentValues = selectedAssignmentChoices(kind);
-                const nextValues = editing.assignment
-                    ? [value]
-                    : currentValues.includes(value)
-                      ? currentValues.filter((item) => item !== value)
-                      : [...currentValues, value];
+                let nextValues;
+                
+                if (editing.assignment) {
+                    nextValues = currentValues.includes(value) ? [] : [value];
+                } else {
+                    nextValues = currentValues.includes(value)
+                        ? currentValues.filter((item) => item !== value)
+                        : [...currentValues, value];
+                }
 
                 setAssignmentSelection(kind, nextValues);
                 updateAssignmentChoiceGrid(kind, nextValues);
@@ -7330,6 +7348,7 @@
                                         stageById(subject.stageId)?.name ||
                                             "مرحلة غير محددة"
                                     )}
+                                    — ${subject.weeklyPeriods || 0} حصة أسبوعية
                                     ${
                                         isArtSubject(subject)
                                             ? " — كتلة مزدوجة"
@@ -8243,6 +8262,7 @@
                 editing.subject = null;
                 $("#subjectNameInput").value = "";
                 $("#subjectColorInput").value = "#0b8a76";
+                $("#subjectWeeklyPeriodsInput").value = "0";
                 $("#saveSubjectButton").textContent = "إضافة المادة";
             }
 
@@ -8260,7 +8280,7 @@
             function resetAssignmentEditor() {
                 editing.assignment = null;
                 $("#assignmentTeacherSelect").value = "";
-                $("#assignmentWeeklyPeriodsInput").value = "4";
+                $("#assignmentWeeklyPeriodsInput").value = "0";
                 setAssignmentSelection("stage", "");
                 setAssignmentSelection("subject", []);
                 setAssignmentSelection("class", []);
@@ -8646,50 +8666,6 @@
                     return;
                 }
 
-                if (
-                    !Number.isInteger(weeklyPeriods) ||
-                    weeklyPeriods < 1
-                ) {
-                    showToast(
-                        "أدخل عدداً صحيحاً موجباً للحصص الأسبوعية.",
-                        "error"
-                    );
-                    return;
-                }
-
-                const invalidRegularSubjects = subjects.filter(
-                    (subject) =>
-                        !isArtSubject(subject) &&
-                        weeklyPeriods > MAX_REGULAR_WEEKLY_PERIODS
-                );
-
-                if (invalidRegularSubjects.length) {
-                    showToast(
-                        `لا يمكن أن تتجاوز المواد العادية 6 حصص أسبوعياً: ${invalidRegularSubjects
-                            .map((subject) => subject.name)
-                            .join("، ")}.`,
-                        "error"
-                    );
-                    return;
-                }
-
-                const invalidArtSubjects = subjects.filter(
-                    (subject) =>
-                        isArtSubject(subject) &&
-                        (weeklyPeriods % 2 !== 0 ||
-                            weeklyPeriods > DAYS.length * 2)
-                );
-
-                if (invalidArtSubjects.length) {
-                    showToast(
-                        `المواد الفنية تحتاج عدداً زوجياً لا يتجاوز 10 حصص أسبوعياً: ${invalidArtSubjects
-                            .map((subject) => subject.name)
-                            .join("، ")}.`,
-                        "error"
-                    );
-                    return;
-                }
-
                 const plannedAssignments = subjectIds.flatMap(
                     (subjectId) =>
                         classIds.map((classId) => ({
@@ -8727,6 +8703,11 @@
                     return;
                 }
 
+                const plannedPeriodsTotal = plannedAssignments.reduce(
+                    (sum, planned) => sum + Number(subjectById(planned.subjectId)?.weeklyPeriods || 0),
+                    0
+                );
+
                 const teacherAssignedPeriods =
                     state.teachingAssignments
                         .filter(
@@ -8738,8 +8719,7 @@
                             (total, assignment) =>
                                 total + Number(assignment.weeklyPeriods),
                             0
-                        ) +
-                    plannedAssignments.length * weeklyPeriods;
+                        ) + plannedPeriodsTotal;
 
                 const teacherCapacity = Math.min(
                     Number(teacher.maxLessons || 24),
@@ -8777,7 +8757,10 @@
                             plannedAssignments.filter(
                                 (planned) =>
                                     planned.classId === schoolClass.id
-                            ).length * weeklyPeriods;
+                            ).reduce(
+                                (sum, planned) => sum + Number(subjectById(planned.subjectId)?.weeklyPeriods || 0),
+                                0
+                            );
 
                         return (
                             assignedPeriods + addedPeriods >
@@ -8828,10 +8811,12 @@
                         );
                         return;
                     }
+                    
+                    const newWeeklyPeriods = Number(subjectById(subjectId)?.weeklyPeriods || 0);
 
-                    if (weeklyPeriods < scheduledPeriods) {
+                    if (newWeeklyPeriods < scheduledPeriods) {
                         showToast(
-                            `لا يمكن خفض التكليف عن ${scheduledPeriods} حصة مجدولة حالياً.`,
+                            `لا يمكن خفض التكليف عن ${scheduledPeriods} حصة مجدولة حالياً. (المادة: ${newWeeklyPeriods})`,
                             "error"
                         );
                         return;
@@ -8845,7 +8830,7 @@
                                       teacherId,
                                       subjectId,
                                       classId,
-                                      weeklyPeriods
+                                      weeklyPeriods: newWeeklyPeriods
                                   }
                                 : item
                     );
@@ -8856,7 +8841,7 @@
                             teacherId,
                             subjectId,
                             classId,
-                            weeklyPeriods
+                            weeklyPeriods: Number(subjectById(subjectId)?.weeklyPeriods || 0)
                         })
                     );
 
@@ -8958,6 +8943,9 @@
 
                         $("#subjectColorInput").value =
                             safeColor(subject.color);
+                            
+                        $("#subjectWeeklyPeriodsInput").value =
+                            subject.weeklyPeriods || "0";
 
                         $("#saveSubjectButton").textContent =
                             "حفظ التعديل";
