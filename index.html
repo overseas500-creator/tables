@@ -2857,19 +2857,16 @@
                                 ></div>
                             </div>
 
-                            <div class="field">
-                                <label for="assignmentWeeklyPeriodsInput">عدد الحصص الأسبوعية</label>
-                                <input
-                                    id="assignmentWeeklyPeriodsInput"
-                                    class="control"
-                                    type="number"
-                                    value="0"
-                                    readonly
-                                >
-                                <small class="hint">
-                                    يتم حساب إجمالي الحصص تلقائياً بناءً على المواد المختارة.
-                                </small>
-                                <small id="assignmentBatchSummary" class="hint" aria-live="polite">
+                            <div class="field" style="display: flex; flex-direction: column; gap: 8px; font-size: 1.1em; font-weight: bold; color: #444; background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px solid #eaeaea;">
+                                <div>
+                                    <span style="color: #666;">عدد حصص المادة:</span> 
+                                    <span id="assignmentSubjectPeriodsDisplay" style="color: #0b8a76; margin-right: 8px;">0</span>
+                                </div>
+                                <div style="font-size: 1.1em; padding-top: 8px; border-top: 1px solid #ddd;">
+                                    <span style="color: #666;">إجمالي عبء التكليف المضاف:</span> 
+                                    <span id="assignmentTotalPeriodsDisplay" style="color: #d9534f; margin-right: 8px;">0</span> <span style="font-size: 0.8em; font-weight: normal; color: #666;">حصة</span>
+                                </div>
+                                <small id="assignmentBatchSummary" class="hint" aria-live="polite" style="margin-top: 4px;">
                                     اختر مادة واحدة وفصلاً واحداً على الأقل.
                                 </small>
                             </div>
@@ -6929,9 +6926,9 @@
 
                 const selectedSubjectsWeeklyPeriods = subjectIds.reduce((sum, id) => sum + Number(subjectById(id)?.weeklyPeriods || 0), 0);
                 
-                const weeklyPeriodsInput = $("#assignmentWeeklyPeriodsInput");
-                if (weeklyPeriodsInput) {
-                    weeklyPeriodsInput.value = selectedSubjectsWeeklyPeriods;
+                const subjectPeriodsDisplay = $("#assignmentSubjectPeriodsDisplay");
+                if (subjectPeriodsDisplay) {
+                    subjectPeriodsDisplay.textContent = selectedSubjectsWeeklyPeriods;
                 }
 
                 button.textContent =
@@ -6952,6 +6949,11 @@
                     formatAssignmentCount(assignmentCount);
                 const totalPeriodsText =
                     formatPeriodCount(totalPeriods);
+
+                const totalPeriodsDisplay = $("#assignmentTotalPeriodsDisplay");
+                if (totalPeriodsDisplay) {
+                    totalPeriodsDisplay.textContent = totalPeriods;
+                }
 
                 summary.textContent = totalPeriods > 0
                     ? `سيتم إنشاء ${assignmentCountText}، بإجمالي ${totalPeriodsText} على حمل المعلم.`
@@ -8361,7 +8363,10 @@
             function resetAssignmentEditor() {
                 editing.assignment = null;
                 $("#assignmentTeacherSelect").value = "";
-                $("#assignmentWeeklyPeriodsInput").value = "0";
+                const subjectPeriodsDisplay = $("#assignmentSubjectPeriodsDisplay");
+                if (subjectPeriodsDisplay) subjectPeriodsDisplay.textContent = "0";
+                const totalPeriodsDisplay = $("#assignmentTotalPeriodsDisplay");
+                if (totalPeriodsDisplay) totalPeriodsDisplay.textContent = "0";
                 setAssignmentSelection("stage", "");
                 setAssignmentSelection("subject", []);
                 setAssignmentSelection("class", []);
@@ -8681,10 +8686,7 @@
                 );
             });
 
-            $("#assignmentWeeklyPeriodsInput").addEventListener(
-                "input",
-                updateAssignmentBatchSummary
-            );
+
 
             $("#assignmentForm").addEventListener("submit", (event) => {
                 event.preventDefault();
@@ -8693,9 +8695,7 @@
                 const stageId = selectedAssignmentChoice("stage");
                 const subjectIds = selectedAssignmentChoices("subject");
                 const classIds = selectedAssignmentChoices("class");
-                const weeklyPeriods = Number(
-                    $("#assignmentWeeklyPeriodsInput").value
-                );
+
                 const wasEditingAssignment = Boolean(
                     editing.assignment
                 );
@@ -9084,8 +9084,10 @@
                             assignment.subjectId
                         );
 
-                        $("#assignmentWeeklyPeriodsInput").value =
-                            Number(assignment.weeklyPeriods);
+                        const subjectPeriodsDisplay = $("#assignmentSubjectPeriodsDisplay");
+                        if (subjectPeriodsDisplay) subjectPeriodsDisplay.textContent = Number(assignment.weeklyPeriods);
+                        const totalPeriodsDisplay = $("#assignmentTotalPeriodsDisplay");
+                        if (totalPeriodsDisplay) totalPeriodsDisplay.textContent = Number(assignment.weeklyPeriods);
                         $("#saveAssignmentButton").textContent =
                             "حفظ التعديل";
                     }
