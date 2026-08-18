@@ -6762,6 +6762,21 @@
                                   )}"`
                                 : "";
 
+                        let extraInfo = "";
+                        if (kind === "stage") {
+                            const stageClasses = state.classes.filter(c => c.stageId === item.id);
+                            const stageSubjects = state.subjects.filter(s => s.stageId === item.id);
+                            const totalPeriods = stageClasses.length * stageSubjects.reduce((sum, s) => sum + Number(s.weeklyPeriods || 0), 0);
+                            
+                            const assignedPeriods = state.teachingAssignments
+                                .filter(a => stageClasses.some(c => c.id === a.classId))
+                                .reduce((sum, a) => sum + Number(a.weeklyPeriods || 0), 0);
+                            
+                            const remaining = totalPeriods - assignedPeriods;
+                            const color = remaining === 0 ? '#10b981' : (remaining < 0 ? '#ef4444' : '#64748b');
+                            extraInfo = `<div style="font-size: 0.85em; font-weight: normal; color: ${color}; margin-top: 2px;">المتبقي: ${remaining}</div>`;
+                        }
+
                         return `
                             <button
                                 type="button"
@@ -6788,9 +6803,10 @@
                                 <span class="assignment-choice-icon" aria-hidden="true">
                                     ${assignmentChoiceIcon(kind, item)}
                                 </span>
-                                <span class="assignment-choice-text">${escapeHTML(
-                                    item.name
-                                )}</span>
+                                <span class="assignment-choice-text">
+                                    ${escapeHTML(item.name)}
+                                    ${extraInfo}
+                                </span>
                                 <span class="assignment-choice-check" aria-hidden="true">✓</span>
                             </button>
                         `;
