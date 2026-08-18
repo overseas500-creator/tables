@@ -6976,30 +6976,6 @@
 
                 const isEditing = !!editing.assignment;
 
-                const subjectIds = selectedAssignmentChoices("subject");
-                const subjectCount = subjectIds.length;
-                const classCount = selectedAssignmentChoices("class").length;
-                const assignmentCount = subjectCount * classCount;
-
-                const selectedSubjectsWeeklyPeriods = subjectIds.reduce((sum, id) => sum + Number(subjectById(id)?.weeklyPeriods || 0), 0);
-                
-                const subjectPeriodsDisplay = $("#assignmentSubjectPeriodsDisplay");
-                if (subjectPeriodsDisplay) {
-                    subjectPeriodsDisplay.textContent = selectedSubjectsWeeklyPeriods;
-                }
-
-                button.textContent = isEditing
-                    ? "حفظ التعديل"
-                    : assignmentCount > 1
-                        ? `إضافة ${formatAssignmentCount(assignmentCount)}`
-                        : "إضافة التكليف";
-
-                if (!assignmentCount) {
-                    summary.textContent =
-                        "اختر مادة واحدة وفصلاً واحداً على الأقل.";
-                    return;
-                }
-
                 const teacherId = $("#assignmentTeacherSelect")?.value;
                 let existingPeriods = 0;
                 
@@ -7017,17 +6993,42 @@
                     }
                 }
 
+                const subjectIds = selectedAssignmentChoices("subject");
+                const subjectCount = subjectIds.length;
+                const classCount = selectedAssignmentChoices("class").length;
+                const assignmentCount = subjectCount * classCount;
+
+                const selectedSubjectsWeeklyPeriods = subjectIds.reduce((sum, id) => sum + Number(subjectById(id)?.weeklyPeriods || 0), 0);
+                
+                const subjectPeriodsDisplay = $("#assignmentSubjectPeriodsDisplay");
+                if (subjectPeriodsDisplay) {
+                    subjectPeriodsDisplay.textContent = selectedSubjectsWeeklyPeriods;
+                }
+                
                 const totalPeriods = classCount * selectedSubjectsWeeklyPeriods;
                 const combinedTotalPeriods = existingPeriods + totalPeriods;
-                const assignmentCountText =
-                    formatAssignmentCount(assignmentCount);
-                const totalPeriodsText =
-                    formatPeriodCount(totalPeriods);
 
                 const totalPeriodsDisplay = $("#assignmentTotalPeriodsDisplay");
                 if (totalPeriodsDisplay) {
                     totalPeriodsDisplay.textContent = combinedTotalPeriods;
                 }
+
+                button.textContent = isEditing
+                    ? "حفظ التعديل"
+                    : assignmentCount > 1
+                        ? `إضافة ${formatAssignmentCount(assignmentCount)}`
+                        : "إضافة التكليف";
+
+                if (!assignmentCount) {
+                    summary.textContent =
+                        "اختر مادة واحدة وفصلاً واحداً على الأقل.";
+                    return;
+                }
+
+                const assignmentCountText =
+                    formatAssignmentCount(assignmentCount);
+                const totalPeriodsText =
+                    formatPeriodCount(totalPeriods);
 
                 const actionText = isEditing ? "تعديل/إنشاء" : "إنشاء";
                 summary.textContent = totalPeriods > 0
