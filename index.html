@@ -7000,7 +7000,25 @@
                     return;
                 }
 
+                const teacherId = $("#assignmentTeacherSelect")?.value;
+                let existingPeriods = 0;
+                
+                if (teacherId) {
+                    const existingAssignments = state.teachingAssignments.filter(a => a.teacherId === teacherId);
+                    
+                    if (isEditing) {
+                        const original = state.teachingAssignments.find(a => a.id === editing.assignment);
+                        if (original) {
+                            const originalPeriods = Number(subjectById(original.subjectId)?.weeklyPeriods || 0);
+                            existingPeriods = existingAssignments.reduce((sum, a) => sum + Number(subjectById(a.subjectId)?.weeklyPeriods || 0), 0) - originalPeriods;
+                        }
+                    } else {
+                        existingPeriods = existingAssignments.reduce((sum, a) => sum + Number(subjectById(a.subjectId)?.weeklyPeriods || 0), 0);
+                    }
+                }
+
                 const totalPeriods = classCount * selectedSubjectsWeeklyPeriods;
+                const combinedTotalPeriods = existingPeriods + totalPeriods;
                 const assignmentCountText =
                     formatAssignmentCount(assignmentCount);
                 const totalPeriodsText =
@@ -7008,12 +7026,12 @@
 
                 const totalPeriodsDisplay = $("#assignmentTotalPeriodsDisplay");
                 if (totalPeriodsDisplay) {
-                    totalPeriodsDisplay.textContent = totalPeriods;
+                    totalPeriodsDisplay.textContent = combinedTotalPeriods;
                 }
 
                 const actionText = isEditing ? "تعديل/إنشاء" : "إنشاء";
                 summary.textContent = totalPeriods > 0
-                    ? `سيتم ${actionText} ${assignmentCountText}، بإجمالي ${totalPeriodsText} على حمل المعلم.`
+                    ? `سيتم ${actionText} ${assignmentCountText}، بإضافة ${totalPeriodsText} لحمل المعلم.`
                     : `سيتم ${actionText} ${assignmentCountText}، ولكن لم يتم تحديد حصص للمواد المختارة.`;
             }
 
@@ -7593,6 +7611,7 @@
                             اختر معلماً من القائمة أعلاه لعرض التكليفات المسندة إليه وتعديلها.
                         </div>
                     `;
+                    updateAssignmentBatchSummary();
                     return;
                 }
 
@@ -7604,6 +7623,7 @@
                             لم تُسند أي تكليفات لهذا المعلم بعد.
                         </div>
                     `;
+                    updateAssignmentBatchSummary();
                     return;
                 }
 
@@ -7691,6 +7711,8 @@
                         `;
                     })
                     .join("");
+                    
+                updateAssignmentBatchSummary();
             }
 
             function renderLessonBank() {
