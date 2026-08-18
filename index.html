@@ -6974,12 +6974,7 @@
                     return;
                 }
 
-                if (editing.assignment) {
-                    button.textContent = "حفظ التعديل";
-                    summary.textContent =
-                        "وضع التعديل يغيّر تكليفاً واحداً فقط.";
-                    return;
-                }
+                const isEditing = !!editing.assignment;
 
                 const subjectIds = selectedAssignmentChoices("subject");
                 const subjectCount = subjectIds.length;
@@ -6993,11 +6988,10 @@
                     subjectPeriodsDisplay.textContent = selectedSubjectsWeeklyPeriods;
                 }
 
-                button.textContent =
-                    assignmentCount > 1
-                        ? `إضافة ${formatAssignmentCount(
-                              assignmentCount
-                          )}`
+                button.textContent = isEditing
+                    ? "حفظ التعديل"
+                    : assignmentCount > 1
+                        ? `إضافة ${formatAssignmentCount(assignmentCount)}`
                         : "إضافة التكليف";
 
                 if (!assignmentCount) {
@@ -7017,9 +7011,10 @@
                     totalPeriodsDisplay.textContent = totalPeriods;
                 }
 
+                const actionText = isEditing ? "تعديل/إنشاء" : "إنشاء";
                 summary.textContent = totalPeriods > 0
-                    ? `سيتم إنشاء ${assignmentCountText}، بإجمالي ${totalPeriodsText} على حمل المعلم.`
-                    : `سيتم إنشاء ${assignmentCountText}، ولكن لم يتم تحديد حصص للمواد المختارة.`;
+                    ? `سيتم ${actionText} ${assignmentCountText}، بإجمالي ${totalPeriodsText} على حمل المعلم.`
+                    : `سيتم ${actionText} ${assignmentCountText}، ولكن لم يتم تحديد حصص للمواد المختارة.`;
             }
 
             function chooseAssignmentOption(kind, value) {
@@ -7043,13 +7038,9 @@
                 const currentValues = selectedAssignmentChoices(kind);
                 let nextValues;
                 
-                if (editing.assignment) {
-                    nextValues = currentValues.includes(value) ? [] : [value];
-                } else {
-                    nextValues = currentValues.includes(value)
-                        ? currentValues.filter((item) => item !== value)
-                        : [...currentValues, value];
-                }
+                nextValues = currentValues.includes(value)
+                    ? currentValues.filter((item) => item !== value)
+                    : [...currentValues, value];
 
                 setAssignmentSelection(kind, nextValues);
                 updateAssignmentChoiceGrid(kind, nextValues);
