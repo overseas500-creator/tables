@@ -7694,8 +7694,7 @@
                                         ${escapeHTML(subject?.name || "")} (${Number(assignment.weeklyPeriods)}) — ${escapeHTML(schoolClass?.name || "")}
                                     </span>
                                     <button type="button" class="icon-btn delete" style="padding: 0; margin: 0; min-width: auto; height: auto; font-size: 14px; background: transparent; border: none; color: ${textColor}; opacity: 0.8;" 
-                                            data-entity="assignment" data-action="delete" data-id="${escapeHTML(assignment.id)}" title="حذف التكليف"
-                                            onclick="event.stopPropagation();">✖</button>
+                                            data-entity="assignment" data-action="delete" data-id="${escapeHTML(assignment.id)}" title="حذف التكليف">✖</button>
                                 </div>
                             `;
                         }).join("");
