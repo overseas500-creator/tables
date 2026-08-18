@@ -7390,26 +7390,43 @@
                     return;
                 }
 
-                list.innerHTML = state.teachers
+                const headerHTML = `
+                    <div class="data-item bulk-actions-bar" style="background: #f8f9fa; border-bottom: 2px solid #eee;">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold;">
+                            <input type="checkbox" id="selectAllTeachersCheckbox">
+                            تحديد الكل
+                        </label>
+                        <div class="item-actions">
+                            <button type="button" id="deleteSelectedTeachersBtn" class="btn btn-secondary" style="color: #dc3545; border-color: #dc3545;" disabled>
+                                حذف المحدد (<span id="selectedTeachersCount">0</span>)
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                list.innerHTML = headerHTML + state.teachers
                     .map((teacher) => `
                         <div class="data-item">
-                            <div>
-                                <div class="data-item-title">
-                                    <strong>${escapeHTML(teacher.name)}</strong>
-                                    ${
-                                        teacher.excludeFromWaiting
-                                            ? '<span class="waiting-exclusion-badge">مستثنى من الانتظار</span>'
-                                            : ""
-                                    }
+                            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                                <input type="checkbox" class="teacher-checkbox" value="${escapeHTML(teacher.id)}" style="margin-top: 4px;">
+                                <div>
+                                    <div class="data-item-title">
+                                        <strong>${escapeHTML(teacher.name)}</strong>
+                                        ${
+                                            teacher.excludeFromWaiting
+                                                ? '<span class="waiting-exclusion-badge">مستثنى من الانتظار</span>'
+                                                : ""
+                                        }
+                                    </div>
+                                    <small>
+                                        الهوية: ${escapeHTML(teacher.nationalId)}
+                                        — الجوال: ${escapeHTML(teacher.phone)}
+                                        — التكليف: ${teacherAssignedPeriods(
+                                            teacher.id
+                                        )}/${Number(teacher.maxLessons || 24)}
+                                        — المجدول: ${teacherWeeklyLoad(teacher.id)}
+                                    </small>
                                 </div>
-                                <small>
-                                    الهوية: ${escapeHTML(teacher.nationalId)}
-                                    — الجوال: ${escapeHTML(teacher.phone)}
-                                    — التكليف: ${teacherAssignedPeriods(
-                                        teacher.id
-                                    )}/${Number(teacher.maxLessons || 24)}
-                                    — المجدول: ${teacherWeeklyLoad(teacher.id)}
-                                </small>
                             </div>
 
                             <div class="item-actions">
@@ -9160,6 +9177,86 @@
                 renderAll();
                 showToast("تم الحذف.");
             });
+            
+            document.addEventListener("change", (event) => {
+                if (event.target.id === "selectAllTeachersCheckbox") {
+                    const isChecked = event.target.checked;
+                    const checkboxes = document.querySelectorAll(".teacher-checkbox");
+                    checkboxes.forEach((cb) => {
+                        cb.checked = isChecked;
+                    });
+                    updateBulkDeleteTeacherBtnState();
+                } else if (event.target.classList.contains("teacher-checkbox")) {
+                    const checkboxes = document.querySelectorAll(".teacher-checkbox");
+                    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                    const selectAllCheckbox = document.getElementById("selectAllTeachersCheckbox");
+                    if (selectAllCheckbox) {
+                        selectAllCheckbox.checked = allChecked;
+                    }
+                    updateBulkDeleteTeacherBtnState();
+                }
+            });
+
+            document.addEventListener("click", (event) => {
+                if (event.target.id === "deleteSelectedTeachersBtn") {
+                    const selectedCheckboxes = document.querySelectorAll(".teacher-checkbox:checked");
+                    if (selectedCheckboxes.length === 0) return;
+
+                    if (!window.confirm("سيتم حذف المعلمين المحددين وتكليفاتهم وحصصهم من الجداول. هل تريد المتابعة؟")) {
+                        return;
+                    }
+
+                    const idsToDelete = Array.from(selectedCheckboxes).map(cb => cb.value);
+                    
+                    state.teachers = state.teachers.filter(
+                        (item) => !idsToDelete.includes(item.id)
+                    );
+
+                    state.schedule = state.schedule.filter(
+                        (lesson) => !idsToDelete.includes(lesson.teacherId)
+                    );
+
+                    state.teachingAssignments = state.teachingAssignments.filter(
+                        (assignment) => !idsToDelete.includes(assignment.teacherId)
+                    );
+
+                    selectedAbsentTeacherIds = selectedAbsentTeacherIds.filter(
+                        (teacherId) => !idsToDelete.includes(teacherId)
+                    );
+
+                    invalidateWaitingReport();
+                    
+                    state.teachingAssignments = repairTeachingAssignments(state);
+                    state.schedule = repairSchedule(state);
+
+                    saveState();
+                    renderAll();
+                    showToast(`تم حذف ${idsToDelete.length} معلم بنجاح.`);
+                }
+            });
+            
+            function updateBulkDeleteTeacherBtnState() {
+                const selectedCount = document.querySelectorAll(".teacher-checkbox:checked").length;
+                const deleteBtn = document.getElementById("deleteSelectedTeachersBtn");
+                const countSpan = document.getElementById("selectedTeachersCount");
+                
+                if (deleteBtn && countSpan) {
+                    countSpan.textContent = selectedCount;
+                    if (selectedCount > 0) {
+                        deleteBtn.disabled = false;
+                        deleteBtn.classList.remove("btn-secondary");
+                        deleteBtn.classList.add("btn-danger");
+                        deleteBtn.style.background = "#dc3545";
+                        deleteBtn.style.color = "#fff";
+                    } else {
+                        deleteBtn.disabled = true;
+                        deleteBtn.classList.add("btn-secondary");
+                        deleteBtn.classList.remove("btn-danger");
+                        deleteBtn.style.background = "transparent";
+                        deleteBtn.style.color = "#dc3545";
+                    }
+                }
+            }
 
             $("#copyStageDataButton").addEventListener(
                 "click",
