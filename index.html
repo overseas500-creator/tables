@@ -2872,7 +2872,7 @@
                                     <span id="assignmentSubjectPeriodsDisplay" style="color: #0b8a76; margin-right: 8px;">0</span>
                                 </div>
                                 <div style="font-size: 1.1em; padding-top: 8px; border-top: 1px solid #ddd;">
-                                    <span style="color: #666;">إجمالي عبء التكليف المضاف:</span> 
+                                    <span style="color: #666;">مجموع الإسنادات:</span> 
                                     <span id="assignmentTotalPeriodsDisplay" style="color: #d9534f; margin-right: 8px;">0</span> <span style="font-size: 0.8em; font-weight: normal; color: #666;">حصة</span>
                                 </div>
                                 <small id="assignmentBatchSummary" class="hint" aria-live="polite" style="margin-top: 4px;">
@@ -7616,37 +7616,55 @@
                     return;
                 }
 
-                const assignmentsByClass = {};
-                teacherAssignments.forEach(assignment => {
-                    if (!assignmentsByClass[assignment.classId]) {
-                        assignmentsByClass[assignment.classId] = [];
+                window.deleteAllTeacherAssignments = function(tId) {
+                    if (confirm("هل أنت متأكد من رغبتك في حذف جميع التكليفات المرتبطة بهذا المعلم؟")) {
+                        state.teachingAssignments = state.teachingAssignments.filter(a => a.teacherId !== tId);
+                        
+                        if (editing.assignment && teacherById(editing.teacher)?.id === tId) {
+                            resetAssignmentEditor();
+                        }
+                        
+                        invalidateWaitingReport();
+                        saveState();
+                        renderAll();
+                        showToast("تم حذف جميع تكليفات المعلم بنجاح.");
                     }
-                    assignmentsByClass[assignment.classId].push(assignment);
+                };
+
+                const assignmentsByStage = {};
+                teacherAssignments.forEach(assignment => {
+                    const classItem = classById(assignment.classId);
+                    const stageId = classItem?.stageId;
+                    if (!assignmentsByStage[stageId]) {
+                        assignmentsByStage[stageId] = [];
+                    }
+                    assignmentsByStage[stageId].push(assignment);
                 });
 
-                const sortedClassIds = Object.keys(assignmentsByClass).sort((a, b) => {
-                    const classA = classById(a);
-                    const classB = classById(b);
-                    return (
-                        (stageById(classA?.stageId)?.name || "").localeCompare(
-                            stageById(classB?.stageId)?.name || "",
-                            "ar"
-                        ) ||
-                        (classA?.name || "").localeCompare(
-                            classB?.name || "",
-                            "ar"
-                        )
-                    );
+                const sortedStageIds = Object.keys(assignmentsByStage).sort((a, b) => {
+                    return (stageById(a)?.name || "").localeCompare(stageById(b)?.name || "", "ar");
                 });
 
-                list.innerHTML = sortedClassIds
-                    .map((classId) => {
-                        const schoolClass = classById(classId);
-                        const stage = stageById(schoolClass?.stageId);
-                        const classAssignments = assignmentsByClass[classId];
+                list.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 12px; background: #fff5f5; border: 1px solid #ffc9c9; border-radius: 8px;">
+                        <strong style="color: #c92a2a; font-size: 1.1em;">إجمالي التكليفات: ${teacherAssignments.length}</strong>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="window.deleteAllTeacherAssignments('${escapeHTML(teacherId)}')">حذف جميع تكليفات المعلم</button>
+                    </div>
+                ` + sortedStageIds
+                    .map((stageId) => {
+                        const stage = stageById(stageId);
+                        const stageAssignments = assignmentsByStage[stageId].sort((a, b) => {
+                            const subA = subjectById(a.subjectId)?.name || "";
+                            const subB = subjectById(b.subjectId)?.name || "";
+                            if (subA !== subB) return subA.localeCompare(subB, "ar");
+                            const classA = classById(a.classId)?.name || "";
+                            const classB = classById(b.classId)?.name || "";
+                            return classA.localeCompare(classB, "ar");
+                        });
 
-                        const pillsHTML = classAssignments.map(assignment => {
+                        const pillsHTML = stageAssignments.map(assignment => {
                             const subject = subjectById(assignment.subjectId);
+                            const schoolClass = classById(assignment.classId);
                             const bgColor = safeColor(subject?.color || "#0b8a76");
                             
                             const hex = bgColor.replace('#', '');
@@ -7660,7 +7678,9 @@
                                 <div class="assignment-pill" style="background-color: ${bgColor}; color: ${textColor}; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; cursor: pointer; transition: opacity 0.2s; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" 
                                      data-entity="assignment" data-action="edit" data-id="${escapeHTML(assignment.id)}" title="انقر لتعديل التكليف"
                                      onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1">
-                                    <span style="font-weight: bold; font-size: 0.9em;">${escapeHTML(subject?.name || "")} (${Number(assignment.weeklyPeriods)})</span>
+                                    <span style="font-weight: bold; font-size: 0.9em;">
+                                        ${escapeHTML(subject?.name || "")} (${Number(assignment.weeklyPeriods)}) — ${escapeHTML(schoolClass?.name || "")}
+                                    </span>
                                     <button type="button" class="icon-btn delete" style="padding: 0; margin: 0; min-width: auto; height: auto; font-size: 14px; background: transparent; border: none; color: ${textColor}; opacity: 0.8;" 
                                             data-entity="assignment" data-action="delete" data-id="${escapeHTML(assignment.id)}" title="حذف التكليف"
                                             onclick="event.stopPropagation();">✖</button>
@@ -7671,7 +7691,7 @@
                         return `
                             <div class="data-item" style="flex-direction: column; align-items: stretch; gap: 12px; margin-bottom: 12px; border: 1px solid #eaeaea; border-radius: 8px; padding: 12px; background: #fff;">
                                 <div style="font-weight: bold; color: #444; border-bottom: 1px solid #eee; padding-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-                                    <span style="font-size: 1.2em;">🎓</span> المرحلة: ${escapeHTML(stage?.name || "")} — الفصل: ${escapeHTML(schoolClass?.name || "")}
+                                    <span style="font-size: 1.2em;">🎓</span> المرحلة: ${escapeHTML(stage?.name || "")}
                                 </div>
                                 <div style="display: flex; gap: 10px; flex-wrap: wrap; padding-top: 4px;">
                                     ${pillsHTML}
