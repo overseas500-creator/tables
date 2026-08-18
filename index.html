@@ -692,6 +692,15 @@
             box-shadow: 0 7px 18px rgba(11, 138, 118, 0.13);
         }
 
+        .assignment-choice.is-disabled {
+            opacity: 0.4;
+            pointer-events: auto;
+            cursor: not-allowed;
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            filter: grayscale(100%);
+        }
+
         .assignment-choice-icon {
             display: inline-grid;
             width: 28px;
@@ -6836,6 +6845,59 @@
                 );
             }
 
+            function updateAssignmentDisabledStates() {
+                const selectedSubjects = selectedAssignmentChoices("subject");
+                const selectedClasses = selectedAssignmentChoices("class");
+                
+                const classContainer = $("#assignmentClassGrid");
+                if (classContainer) {
+                    classContainer.querySelectorAll("[data-assignment-choice]").forEach(button => {
+                        const classId = button.dataset.value;
+                        let conflict = null;
+                        for (const subjectId of selectedSubjects) {
+                            conflict = state.teachingAssignments.find(
+                                a => a.id !== editing.assignment && a.subjectId === subjectId && a.classId === classId
+                            );
+                            if (conflict) break;
+                        }
+                        
+                        if (conflict) {
+                            const teacher = teacherById(conflict.teacherId);
+                            const subject = subjectById(conflict.subjectId);
+                            button.classList.add("is-disabled");
+                            button.dataset.conflictMessage = `تم ربط مادة ${subject?.name || ""} بهذا الفصل مسبقاً للمعلم ${teacher?.name || ""}`;
+                        } else {
+                            button.classList.remove("is-disabled");
+                            delete button.dataset.conflictMessage;
+                        }
+                    });
+                }
+                
+                const subjectContainer = $("#assignmentSubjectGrid");
+                if (subjectContainer) {
+                    subjectContainer.querySelectorAll("[data-assignment-choice]").forEach(button => {
+                        const subjectId = button.dataset.value;
+                        let conflict = null;
+                        for (const classId of selectedClasses) {
+                            conflict = state.teachingAssignments.find(
+                                a => a.id !== editing.assignment && a.subjectId === subjectId && a.classId === classId
+                            );
+                            if (conflict) break;
+                        }
+                        
+                        if (conflict) {
+                            const teacher = teacherById(conflict.teacherId);
+                            const schoolClass = classById(conflict.classId);
+                            button.classList.add("is-disabled");
+                            button.dataset.conflictMessage = `تم ربط الفصل ${schoolClass?.name || ""} بهذه المادة مسبقاً للمعلم ${teacher?.name || ""}`;
+                        } else {
+                            button.classList.remove("is-disabled");
+                            delete button.dataset.conflictMessage;
+                        }
+                    });
+                }
+            }
+
             function updateAssignmentChoiceGrid(kind, selectedValues) {
                 const config = ASSIGNMENT_CHOICE_CONFIG[kind];
                 const container = config
@@ -6991,6 +7053,7 @@
 
                 setAssignmentSelection(kind, nextValues);
                 updateAssignmentChoiceGrid(kind, nextValues);
+                updateAssignmentDisabledStates();
                 updateAssignmentBatchSummary();
             }
 
@@ -7151,6 +7214,7 @@
                         : "اختر المرحلة أولاً"
                 );
 
+                updateAssignmentDisabledStates();
                 updateAssignmentBatchSummary();
             }
 
@@ -8671,6 +8735,13 @@
                     );
 
                     if (!button || !container.contains(button)) {
+                        return;
+                    }
+
+                    if (button.classList.contains("is-disabled")) {
+                        if (button.dataset.conflictMessage) {
+                            showToast(button.dataset.conflictMessage, "error");
+                        }
                         return;
                     }
 
