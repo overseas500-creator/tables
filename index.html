@@ -7356,14 +7356,16 @@
 
             function renderClasses() {
                 const list = $("#classList");
+                const selectedStageId = $("#classStageSelect")?.value;
+                const filteredClasses = state.classes.filter(c => selectedStageId ? c.stageId === selectedStageId : true);
 
-                if (!state.classes.length) {
+                if (!filteredClasses.length) {
                     list.innerHTML =
-                        '<div class="empty-state">لا توجد فصول مسجلة.</div>';
+                        '<div class="empty-state">لا توجد فصول مسجلة للمرحلة المحددة.</div>';
                     return;
                 }
 
-                list.innerHTML = state.classes
+                list.innerHTML = filteredClasses
                     .map((schoolClass) => `
                         <div class="data-item">
                             <div>
@@ -8488,6 +8490,8 @@
                 renderAll();
                 showToast("تم حفظ المرحلة.");
             });
+
+            $("#classStageSelect")?.addEventListener("change", renderClasses);
 
             $("#classForm").addEventListener("submit", (event) => {
                 event.preventDefault();
