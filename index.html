@@ -8437,6 +8437,7 @@
                 const color = safeColor(
                     $("#subjectColorInput").value
                 );
+                const weeklyPeriods = $("#subjectWeeklyPeriodsInput").value;
 
                 if (!stageId || !name) {
                     showToast("اختر المرحلة وأدخل اسم المادة.", "error");
@@ -8479,12 +8480,14 @@
                     subject.stageId = stageId;
                     subject.name = name;
                     subject.color = color;
+                    subject.weeklyPeriods = weeklyPeriods;
                 } else {
                     state.subjects.push({
                         id: uid("subject"),
                         stageId,
                         name,
-                        color
+                        color,
+                        weeklyPeriods
                     });
                 }
 
@@ -9345,7 +9348,8 @@
                                     id: uid("subject"),
                                     stageId: targetId,
                                     name: sourceSubject.name,
-                                    color: sourceSubject.color
+                                    color: sourceSubject.color,
+                                    weeklyPeriods: sourceSubject.weeklyPeriods || "0"
                                 });
 
                                 copiedSubjects += 1;
