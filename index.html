@@ -3417,8 +3417,8 @@
             const PERIODS = [1, 2, 3, 4, 5, 6, 7];
             const MAX_TEACHER_DAILY_PERIODS = 5;
             const MAX_REGULAR_WEEKLY_PERIODS = DAYS.length + 1;
-            const AUTO_SEARCH_NODE_LIMIT = 200000;
-            const AUTO_SEARCH_TIME_LIMIT_MS = 2000;
+            const AUTO_SEARCH_NODE_LIMIT = 5000000;
+            const AUTO_SEARCH_TIME_LIMIT_MS = 5000;
 
             const $ = (selector) => document.querySelector(selector);
 
@@ -10886,7 +10886,7 @@
 
                     return false;
                 }
-                for (let iter = 0; iter < 100; iter++) {
+                for (let iter = 0; iter < 1000; iter++) {
                     draft.length = 0;
                     classBusy.clear();
                     teacherBusy.clear();
