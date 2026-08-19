@@ -10730,6 +10730,45 @@
                     }
                 }
 
+                function greedyPass() {
+                    const history = [];
+                    while (true) {
+                        const pending = groups.filter((g) => g.remaining > 0);
+                        if (!pending.length) break;
+
+                        let selected = null;
+                        for (const group of pending) {
+                            const candidates = listCandidates(group);
+                            if (!candidates.length) continue;
+
+                            if (
+                                !selected ||
+                                candidates.length < selected.candidates.length ||
+                                (candidates.length === selected.candidates.length && group.duration > selected.group.duration) ||
+                                (candidates.length === selected.candidates.length && group.duration === selected.group.duration && group.remaining > selected.group.remaining)
+                            ) {
+                                selected = { group, candidates };
+                            }
+                        }
+
+                        if (!selected) break;
+
+                        const candidate = selected.candidates[0];
+                        place(selected.group, candidate);
+                        history.push({ group: selected.group, candidate });
+                    }
+
+                    const pendingCount = groups.reduce((acc, g) => acc + g.remaining, 0);
+                    if (pendingCount < minPending) {
+                        minPending = pendingCount;
+                        bestPartial = draft.map((d) => ({ ...d }));
+                    }
+
+                    for (let i = history.length - 1; i >= 0; i--) {
+                        unplace(history[i].group, history[i].candidate);
+                    }
+                }
+
                 function search() {
                     searchNodes += 1;
 
@@ -10851,8 +10890,18 @@
 
                     return false;
                 }
+                for (let iter = 0; iter < 100; iter++) {
+                    groups.sort(() => Math.random() - 0.5);
+                    greedyPass();
+                    if (minPending === 0) break;
+                }
 
-                search();
+                if (minPending === 0) {
+                    best = bestPartial.map((d) => ({ ...d }));
+                } else {
+                    groups.sort((a, b) => b.assignment.weeklyPeriods - a.assignment.weeklyPeriods);
+                    search();
+                }
 
                 if (!best && strictEdgeCaps) {
                     strictEdgeCaps = false;
