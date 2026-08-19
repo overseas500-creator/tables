@@ -3417,8 +3417,8 @@
             const PERIODS = [1, 2, 3, 4, 5, 6, 7];
             const MAX_TEACHER_DAILY_PERIODS = 5;
             const MAX_REGULAR_WEEKLY_PERIODS = DAYS.length + 1;
-            const AUTO_SEARCH_NODE_LIMIT = 350000;
-            const AUTO_SEARCH_TIME_LIMIT_MS = 3000;
+            const AUTO_SEARCH_NODE_LIMIT = 2000000;
+            const AUTO_SEARCH_TIME_LIMIT_MS = 15000;
 
             const $ = (selector) => document.querySelector(selector);
 
@@ -10198,6 +10198,12 @@
                     }
                 );
 
+                // Shuffle groups to randomize MRV tie-breaking
+                for (let i = groups.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [groups[i], groups[j]] = [groups[j], groups[i]];
+                }
+
                 const draft = [];
                 const classBusy = new Set();
                 const teacherBusy = new Set();
@@ -10522,7 +10528,8 @@
 
                                 score +=
                                     dayIndex * 0.01 +
-                                    periodRank * 0.001;
+                                    periodRank * 0.001 +
+                                    (Math.random() * 0.0001);
 
                                 candidates.push({
                                     day: day.id,
