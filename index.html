@@ -2903,7 +2903,12 @@
             <section id="autoSchedulePanel" class="card">
                 <div class="card-header">
                     <div>
-                        <h2 class="card-title">🤖 الخطوة الثانية: إنشاء الجدول آليًا</h2>
+                        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                            <h2 class="card-title">🤖 الخطوة الثانية: إنشاء الجدول آليًا</h2>
+                            <button id="preCheckConflictsButton" type="button" class="btn" style="background-color:#f59e0b; color:white; font-size:1.1rem; padding: 5px 12px;" title="فحص التعارضات المحتملة">
+                                🔍 فحص
+                            </button>
+                        </div>
                         <p class="card-description">
                             يعتمد الإنشاء على تكليفات التدريس المسجلة في الخطوة السابقة،
                             ويوازن الحصتين الأولى والأخيرة بين المعلمين قدر الإمكان.
@@ -2948,14 +2953,9 @@
                         أضف تكليفات التدريس أولاً.
                     </div>
 
-                    <div style="display: flex; gap: 10px;">
-                        <button id="preCheckConflictsButton" type="button" class="btn" style="background-color:#f59e0b; color:white; font-weight:bold;">
-                            🔍 فحص التعارضات المحتملة
-                        </button>
-                        <button id="generateAutomaticScheduleButton" type="button" class="btn btn-primary">
+                    <button id="generateAutomaticScheduleButton" type="button" class="btn btn-primary">
                         إنشاء الجدول آليًا
                     </button>
-                    </div>
                 </div>
 
                 <div id="autoScheduleResult" class="auto-result"></div>
