@@ -3418,7 +3418,7 @@
             const MAX_TEACHER_DAILY_PERIODS = 5;
             const MAX_REGULAR_WEEKLY_PERIODS = DAYS.length + 1;
             const AUTO_SEARCH_NODE_LIMIT = 5000000;
-            const AUTO_SEARCH_TIME_LIMIT_MS = 5000;
+            const AUTO_SEARCH_TIME_LIMIT_MS = 25000;
 
             const $ = (selector) => document.querySelector(selector);
 
@@ -10766,6 +10766,8 @@
                 }
 
 
+                
+                
                 function repairPhase() {
                     let currentDraft = bestPartial.map(l => ({...l}));
                     let unplaced = [];
@@ -10781,7 +10783,7 @@
                     }
 
                     let iterations = 0;
-                    const MAX_ITER = 20000;
+                    const MAX_ITER = 30000;
                     
                     function getConflicts(g, dayId, startPeriod) {
                         let conflicts = [];
@@ -10836,9 +10838,26 @@
                     }
                     
                     let tabu = new Map();
+                    let stagnation = 0;
+                    let lastMinPending = unplaced.length;
 
                     while (unplaced.length > 0 && iterations < MAX_ITER && Date.now() - startedAt < AUTO_SEARCH_TIME_LIMIT_MS) {
                         iterations++;
+                        
+                        if (unplaced.length < lastMinPending) {
+                            lastMinPending = unplaced.length;
+                            stagnation = 0;
+                        } else {
+                            stagnation++;
+                        }
+                        
+                        let maxAllowedBumps = 1;
+                        if (stagnation > 500) {
+                            maxAllowedBumps = 2; // Allow deeper bumps if stuck
+                        }
+                        if (stagnation > 1500) {
+                            maxAllowedBumps = 3;
+                        }
                         
                         let unplacedIndex = Math.floor(Math.random() * unplaced.length);
                         let g = unplaced[unplacedIndex];
@@ -10850,6 +10869,8 @@
                             for (let startPeriod = 1; startPeriod <= PERIODS.length; startPeriod++) {
                                 let conflicts = getConflicts(g, day.id, startPeriod);
                                 if (conflicts === null) continue;
+                                
+                                if (conflicts.length > maxAllowedBumps) continue;
                                 
                                 let penalty = 0;
                                 for (let c of conflicts) {
@@ -11032,7 +11053,7 @@
 
                     return false;
                 }
-                for (let iter = 0; iter < 1000; iter++) {
+                for (let iter = 0; iter < 50; iter++) {
                     draft.length = 0;
                     classBusy.clear();
                     teacherBusy.clear();
