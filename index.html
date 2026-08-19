@@ -10892,7 +10892,7 @@
                 }
 
                 if (minPending === 0) {
-                    best = bestPartial.map((d) => ({ ...d }));
+                    best = { schedule: bestPartial.map((d) => ({ ...d })) };
                 } else {
                     groups.sort((a, b) => b.assignment.weeklyPeriods - a.assignment.weeklyPeriods);
                     search();
