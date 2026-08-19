@@ -4192,6 +4192,11 @@
                 const teacherDailyLoads = new Map();
                 const repaired = [];
 
+                const teacherWeeklyPeriods = new Map();
+                candidateState.teachingAssignments.forEach(a => {
+                    teacherWeeklyPeriods.set(a.teacherId, (teacherWeeklyPeriods.get(a.teacherId) || 0) + Number(a.weeklyPeriods));
+                });
+
                 const classSubjectWeeklyPeriods = new Map();
                 candidateState.teachingAssignments.forEach(a => {
                     const key = `${a.classId}|${a.subjectId}`;
@@ -4277,6 +4282,8 @@
                         teacherDailyLoads.get(dailyLoadKey) || 0
                     );
 
+                    const maxDailyPeriodsForTeacher = Math.max(MAX_TEACHER_DAILY_PERIODS, Math.ceil((teacherWeeklyPeriods.get(assignment.teacherId) || 0) / DAYS.length));
+
                     if (
                         keys.some((key) => occupied.has(key)) ||
                         teacherKeys.some((key) => teacherOccupied.has(key)) ||
@@ -4284,8 +4291,7 @@
                         subjectDayCount >= 2 ||
                         (subjectDayCount === 1 && currentRepeats >= requiredRepeats) ||
                         usedPeriods + duration > assignment.weeklyPeriods ||
-                        teacherDailyLoad + duration >
-                            MAX_TEACHER_DAILY_PERIODS
+                        teacherDailyLoad + duration > maxDailyPeriodsForTeacher
                     ) {
                         continue;
                     }
@@ -9956,6 +9962,11 @@
                     )
                 );
 
+                const teacherWeeklyPeriods = new Map();
+                candidateState.teachingAssignments.forEach(a => {
+                    teacherWeeklyPeriods.set(a.teacherId, (teacherWeeklyPeriods.get(a.teacherId) || 0) + Number(a.weeklyPeriods));
+                });
+
                 const classSubjectWeeklyPeriods = new Map();
                 candidateState.teachingAssignments.forEach(a => {
                     const key = `${a.classId}|${a.subjectId}`;
@@ -10069,11 +10080,12 @@
                         Number(teacherDayLoads.get(dailyKey) || 0) +
                         expectedDuration;
 
-                    if (dailyLoad > MAX_TEACHER_DAILY_PERIODS) {
+                    const maxDailyPeriodsForTeacher = Math.max(MAX_TEACHER_DAILY_PERIODS, Math.ceil((teacherWeeklyPeriods.get(lesson.teacherId) || 0) / DAYS.length));
+
+                    if (dailyLoad > maxDailyPeriodsForTeacher) {
                         return {
                             ok: false,
-                            message:
-                                "تجاوز أحد المعلمين حد 5 حصص في اليوم."
+                            message: "تجاوز أحد المعلمين الحد الأقصى للحصص في اليوم."
                         };
                     }
                     teacherDayLoads.set(dailyKey, dailyLoad);
@@ -10164,6 +10176,14 @@
                 const subjectMap = new Map(
                     candidateState.subjects.map((item) => [item.id, item])
                 );
+
+                const teacherWeeklyPeriods = new Map();
+                candidateState.teachingAssignments.forEach(a => {
+                    teacherWeeklyPeriods.set(
+                        a.teacherId,
+                        (teacherWeeklyPeriods.get(a.teacherId) || 0) + Number(a.weeklyPeriods)
+                    );
+                });
 
                 const classSubjectWeeklyPeriods = new Map();
                 candidateState.teachingAssignments.forEach(a => {
@@ -10409,15 +10429,18 @@
                                     (teacherDailyLoad === 0 ? 1 : 0);
 
                                 if (
+                                    strictTeacherDays &&
                                     remainingTeacherBlocksAfter <
                                     emptyTeacherDaysAfter
                                 ) {
                                     return;
                                 }
 
+                                const maxDailyPeriodsForTeacher = Math.max(MAX_TEACHER_DAILY_PERIODS, Math.ceil((teacherWeeklyPeriods.get(assignment.teacherId) || 0) / DAYS.length));
+
                                 if (
                                     teacherDailyLoad + group.duration >
-                                    MAX_TEACHER_DAILY_PERIODS
+                                    maxDailyPeriodsForTeacher
                                 ) {
                                     return;
                                 }
