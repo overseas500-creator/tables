@@ -11179,78 +11179,12 @@
             }
 
             
-            const preCheckBtn = document.getElementById("preCheckConflictsButton");
-            if (preCheckBtn) {
-                preCheckBtn.addEventListener("click", () => {
-                    const state = loadState();
-                    const assignments = state.teachingAssignments || [];
-                    const resultDiv = document.getElementById("autoScheduleResult");
-                    
-                    if (!assignments.length) {
-                        resultDiv.innerHTML = '<div class="p-4 bg-red-50 text-red-700 rounded-md">❌ أضف تكليفات أولاً في الخطوة السابقة.</div>';
-                        resultDiv.style.display = "block";
-                        return;
-                    }
-
-                    let warnings = [];
-                    let fatals = [];
-                    
-                    const teachers = new Map(state.teachers.map((item) => [item.id, item]));
-                    const classes = new Map(state.classes.map((item) => [item.id, item]));
-                    const subjects = new Map(state.subjects.map((item) => [item.id, item]));
-                    
-                    let teacherLoads = new Map();
-                    let classLoads = new Map();
-                    let seenClassSubjects = new Set();
-                    
-                    for (const a of assignments) {
-                        let w = Number(a.weeklyPeriods);
-                        teacherLoads.set(a.teacherId, (teacherLoads.get(a.teacherId) || 0) + w);
-                        classLoads.set(a.classId, (classLoads.get(a.classId) || 0) + w);
-                        
-                        let key = a.classId + "|" + a.subjectId;
-                        if(seenClassSubjects.has(key)) {
-                            let subject = subjects.get(a.subjectId);
-                            let schoolClass = classes.get(a.classId);
-                            fatals.push(`المادة «${subject?.name}» مرتبطة بأكثر من معلم في الفصل «${schoolClass?.name}».`);
-                        }
-                        seenClassSubjects.add(key);
-                    }
-                    
-                    for (const [classId, load] of classLoads.entries()) {
-                        let cls = classes.get(classId);
-                        if (load > 35) {
-                            fatals.push(`الفصل "${cls?.name}" لديه ${load} حصة (الحد الأقصى 35). يستحيل إنشاء الجدول.`);
-                        } else if (load > 33) {
-                            warnings.push(`الفصل "${cls?.name}" لديه جدول مزدحم جداً (${load} حصة).`);
-                        }
-                    }
-                    
-                    for (const [teacherId, load] of teacherLoads.entries()) {
-                        let teacher = teachers.get(teacherId);
-                        if (!teacher) continue;
-                        let maxL = Number(teacher.maxLessons || 24);
-                        if (load > 35) {
-                            fatals.push(`المعلم "${teacher.name}" مكلف بـ ${load} حصة، وهذا يفوق أيام الأسبوع (35).`);
-                        } else if (load > maxL) {
-                            fatals.push(`المعلم "${teacher.name}" نصابه ${load} حصة، يفوق الحد الذي سجلته له (${maxL}).`);
-                        } else if (load > 24) {
-                            warnings.push(`المعلم "${teacher.name}" لديه نصاب مرتفع (${load} حصة)، سيعمل أكثر من 5 حصص يومياً.`);
-                        }
-                    }
-                    
-                    if (fatals.length === 0 && warnings.length === 0) {
-                        resultDiv.innerHTML = '<div class="p-4 bg-green-50 text-green-700 rounded-md font-bold">✅ التكليفات سليمة تماماً ولا توجد تعارضات متوقعة! الجدول جاهز للإنشاء.</div>';
-                    } else if (fatals.length > 0) {
-                        resultDiv.innerHTML = '<div class="p-4 bg-red-50 text-red-700 rounded-md"><strong>⚠️ أخطاء تمنع بناء الجدول:</strong><ul class="list-disc pl-5 mt-2 space-y-1">' + fatals.map(f => '<li>'+f+'</li>').join('') + '</ul></div>';
-                    } else {
-                        resultDiv.innerHTML = '<div class="p-4 bg-yellow-50 text-yellow-700 rounded-md"><strong>⚠️ تحذيرات (الجدول سيُبنى ولكن بضغط كبير):</strong><ul class="list-disc pl-5 mt-2 space-y-1">' + warnings.map(w => '<li>'+w+'</li>').join('') + '</ul></div>';
-                    }
-                    resultDiv.style.display = "block";
-                });
-            }
+            
 
             
+            
+
+
             const preCheckBtn = document.getElementById("preCheckConflictsButton");
             if (preCheckBtn) {
                 preCheckBtn.addEventListener("click", () => {
