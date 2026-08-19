@@ -10732,30 +10732,26 @@
 
                 function greedyPass() {
                     const history = [];
-                    while (true) {
-                        const pending = groups.filter((g) => g.remaining > 0);
-                        if (!pending.length) break;
+                    const shuffledGroups = [...groups].sort((a, b) => {
+                        const scoreA = a.duration * 100 + Number(a.assignment.weeklyPeriods) * 10 + Math.random() * 20;
+                        const scoreB = b.duration * 100 + Number(b.assignment.weeklyPeriods) * 10 + Math.random() * 20;
+                        return scoreB - scoreA;
+                    });
 
-                        let selected = null;
-                        for (const group of pending) {
+                    for (const group of shuffledGroups) {
+                        const initialRemaining = group.remaining;
+                        for (let i = 0; i < initialRemaining; i++) {
                             const candidates = listCandidates(group);
-                            if (!candidates.length) continue;
-
-                            if (
-                                !selected ||
-                                candidates.length < selected.candidates.length ||
-                                (candidates.length === selected.candidates.length && group.duration > selected.group.duration) ||
-                                (candidates.length === selected.candidates.length && group.duration === selected.group.duration && group.remaining > selected.group.remaining)
-                            ) {
-                                selected = { group, candidates };
+                            if (candidates.length > 0) {
+                                // Add a bit of randomness among the top few candidates
+                                const rIndex = Math.floor(Math.random() * Math.min(3, candidates.length));
+                                const candidate = candidates[rIndex];
+                                place(group, candidate);
+                                history.push({ group, candidate });
+                            } else {
+                                break;
                             }
                         }
-
-                        if (!selected) break;
-
-                        const candidate = selected.candidates[0];
-                        place(selected.group, candidate);
-                        history.push({ group: selected.group, candidate });
                     }
 
                     const pendingCount = groups.reduce((acc, g) => acc + g.remaining, 0);
@@ -10891,7 +10887,6 @@
                     return false;
                 }
                 for (let iter = 0; iter < 100; iter++) {
-                    groups.sort(() => Math.random() - 0.5);
                     greedyPass();
                     if (minPending === 0) break;
                 }
