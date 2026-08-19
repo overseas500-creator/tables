@@ -10283,6 +10283,8 @@
                 let solutionCount = 0;
                 let stoppedByLimit = false;
                 let best = null;
+                let bestPartial = null;
+                let minPending = Infinity;
 
                 function adjustMap(map, key, delta) {
                     const value = Number(map.get(key) || 0) + delta;
@@ -10723,6 +10725,11 @@
                         (group) => group.remaining > 0
                     );
 
+                    if (pending.length < minPending) {
+                        minPending = pending.length;
+                        bestPartial = draft.map(l => ({...l}));
+                    }
+
                     if (!pending.length) {
                         if (!hasRequiredSubjectDistribution()) {
                             return false;
@@ -10832,9 +10839,26 @@
                 }
 
                 if (!best) {
+                    if (bestPartial) {
+                        return {
+                            ok: false,
+                            stoppedByLimit: stoppedByLimit,
+                            isPartial: true,
+                            minPending: minPending,
+                            schedule: bestPartial.map((lesson) => ({
+                                ...lesson,
+                                id: uid("lesson")
+                            })),
+                            message: stoppedByLimit
+                                ? "تعذر إيجاد جدول كامل ضمن الوقت المتاح."
+                                : "لا يمكن إنشاء جدول كامل يحقق جميع الشروط، نعرض أفضل مسودة جزئية."
+                        };
+                    }
+
                     return {
                         ok: false,
                         stoppedByLimit: stoppedByLimit,
+                        isPartial: false,
                         message: stoppedByLimit
                             ? "تعذر إيجاد جدول كامل يضمن حصة لكل معلم في كل يوم ضمن محاولة البحث الحالية."
                             : "لا يمكن إنشاء جدول يحقق التكليفات مع شرط وجود حصة لكل معلم مكلّف في كل يوم."
@@ -10890,6 +10914,7 @@
 
                     try {
                         let plan = null;
+                        let bestGlobalPartial = null;
                         const maxAttempts = 15;
                         
                         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -10901,6 +10926,13 @@
                             if (plan.ok) {
                                 break;
                             }
+
+                            if (plan.isPartial) {
+                                if (!bestGlobalPartial || plan.minPending < bestGlobalPartial.minPending) {
+                                    bestGlobalPartial = plan;
+                                }
+                            }
+                            
                             if (!plan.stoppedByLimit) {
                                 // Failed due to impossible logic, no need to retry
                                 break;
@@ -10908,11 +10940,26 @@
                         }
 
                         if (!plan || !plan.ok) {
-                            const result = $("#autoScheduleResult");
-                            result.className = "auto-result error hint";
-                            result.textContent = plan ? plan.message : "حدث خطأ غير متوقع.";
-                            showToast(plan ? plan.message : "حدث خطأ غير متوقع.", "error");
-                            return;
+                            if (bestGlobalPartial) {
+                                state.schedule = bestGlobalPartial.schedule;
+                                currentPlacement = null;
+                                activeDrag = null;
+                                lastWaitingReport = null;
+                                saveState();
+                                renderAll();
+
+                                const result = $("#autoScheduleResult");
+                                result.className = "auto-result warning hint";
+                                result.textContent = `تم إنشاء معظم الجدول آلياً، بقيت ${bestGlobalPartial.minPending} حصة تتطلب توزيعاً يدوياً بسبب شدة التعارضات.`;
+                                showToast(`تعذر بناء جدول 100%، تم إدراج أفضل مسودة (ينقصها ${bestGlobalPartial.minPending} حصص).`, "error");
+                                return;
+                            } else {
+                                const result = $("#autoScheduleResult");
+                                result.className = "auto-result error hint";
+                                result.textContent = plan ? plan.message : "حدث خطأ غير متوقع.";
+                                showToast(plan ? plan.message : "حدث خطأ غير متوقع.", "error");
+                                return;
+                            }
                         }
 
                         state.schedule = plan.schedule;
