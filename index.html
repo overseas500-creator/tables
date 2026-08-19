@@ -10887,13 +10887,52 @@
                     return false;
                 }
                 for (let iter = 0; iter < 100; iter++) {
+                    draft.length = 0;
+                    classBusy.clear();
+                    teacherBusy.clear();
+                    subjectDayCounts.clear();
+                    repeatedSubjectDays.clear();
+                    teacherDayLoads.clear();
+                    classDayLoads.clear();
+                    for (const t of teacherIds) {
+                        firstCounts.set(t, 0);
+                        lastCounts.set(t, 0);
+                    }
+                    for (const g of groups) {
+                        g.remaining = Number(g.assignment.weeklyPeriods) / g.duration;
+                        g.placementOrders = [];
+                    }
+
                     greedyPass();
+
+                    const pendingCount = groups.reduce((acc, g) => acc + g.remaining, 0);
+                    if (pendingCount < minPending) {
+                        minPending = pendingCount;
+                        bestPartial = draft.map(d => ({...d}));
+                    }
                     if (minPending === 0) break;
                 }
 
                 if (minPending === 0) {
                     best = { schedule: bestPartial.map((d) => ({ ...d })) };
                 } else {
+                    // Restore bestPartial state to run search() on top of it, OR just run search from scratch.
+                    // Actually, search() is a DFS that works best starting from scratch to backtrack cleanly.
+                    draft.length = 0;
+                    classBusy.clear();
+                    teacherBusy.clear();
+                    subjectDayCounts.clear();
+                    repeatedSubjectDays.clear();
+                    teacherDayLoads.clear();
+                    classDayLoads.clear();
+                    for (const t of teacherIds) {
+                        firstCounts.set(t, 0);
+                        lastCounts.set(t, 0);
+                    }
+                    for (const g of groups) {
+                        g.remaining = Number(g.assignment.weeklyPeriods) / g.duration;
+                        g.placementOrders = [];
+                    }
                     groups.sort((a, b) => b.assignment.weeklyPeriods - a.assignment.weeklyPeriods);
                     search();
                 }
