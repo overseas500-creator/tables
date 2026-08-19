@@ -4284,7 +4284,10 @@
                         teacherDailyLoads.get(dailyLoadKey) || 0
                     );
 
-                    const maxDailyPeriodsForTeacher = Math.max(MAX_TEACHER_DAILY_PERIODS, Math.ceil((teacherWeeklyPeriods.get(assignment.teacherId) || 0) / DAYS.length));
+                    let maxDailyPeriodsForTeacher = Math.max(MAX_TEACHER_DAILY_PERIODS, Math.ceil((teacherWeeklyPeriods.get(assignment.teacherId) || 0) / DAYS.length));
+                    if ((teacherWeeklyPeriods.get(assignment.teacherId) || 0) > 20) {
+                        maxDailyPeriodsForTeacher = Math.max(maxDailyPeriodsForTeacher, 6);
+                    }
 
                     if (
                         keys.some((key) => occupied.has(key)) ||
@@ -10081,7 +10084,10 @@
                         Number(teacherDayLoads.get(dailyKey) || 0) +
                         expectedDuration;
 
-                    const maxDailyPeriodsForTeacher = Math.max(MAX_TEACHER_DAILY_PERIODS, Math.ceil((teacherWeeklyPeriods.get(lesson.teacherId) || 0) / DAYS.length));
+                    let maxDailyPeriodsForTeacher = Math.max(MAX_TEACHER_DAILY_PERIODS, Math.ceil((teacherWeeklyPeriods.get(lesson.teacherId) || 0) / DAYS.length));
+                    if ((teacherWeeklyPeriods.get(lesson.teacherId) || 0) > 20) {
+                        maxDailyPeriodsForTeacher = Math.max(maxDailyPeriodsForTeacher, 6);
+                    }
 
                     if (dailyLoad > maxDailyPeriodsForTeacher) {
                         return {
@@ -10441,7 +10447,10 @@
                                     return;
                                 }
 
-                                const maxDailyPeriodsForTeacher = Math.max(MAX_TEACHER_DAILY_PERIODS, Math.ceil((teacherWeeklyPeriods.get(assignment.teacherId) || 0) / DAYS.length));
+                                let maxDailyPeriodsForTeacher = Math.max(MAX_TEACHER_DAILY_PERIODS, Math.ceil((teacherWeeklyPeriods.get(assignment.teacherId) || 0) / DAYS.length));
+                                if ((teacherWeeklyPeriods.get(assignment.teacherId) || 0) > 20) {
+                                    maxDailyPeriodsForTeacher = Math.max(maxDailyPeriodsForTeacher, 6);
+                                }
 
                                 if (
                                     teacherDailyLoad + group.duration >
