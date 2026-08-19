@@ -4265,14 +4265,9 @@
                         subjectDayCounts.get(subjectDayKey) || 0
                     );
 
-                    const repeatAllowed = allowsOneSubjectRepeat(
-                        assignment,
-                        subject
-                    );
-
-                    const repeatedDay = repeatedSubjectDays.get(
-                        assignment.id
-                    );
+                    const totalPeriods = classSubjectWeeklyPeriods.get(`${assignment.classId}|${assignment.subjectId}`) || 0;
+                    const requiredRepeats = Math.max(0, totalPeriods - DAYS.length);
+                    const currentRepeats = Number(repeatedSubjectDays.get(`${assignment.classId}|${assignment.subjectId}`) || 0);
 
                     const usedPeriods = Number(
                         assignmentUsage.get(assignment.id) || 0
@@ -4285,11 +4280,9 @@
                     if (
                         keys.some((key) => occupied.has(key)) ||
                         teacherKeys.some((key) => teacherOccupied.has(key)) ||
-                        (!repeatAllowed && subjectDayCount >= 1) ||
+                        (requiredRepeats === 0 && subjectDayCount >= 1) ||
                         subjectDayCount >= 2 ||
-                        (subjectDayCount === 1 &&
-                            repeatedDay &&
-                            repeatedDay !== rawLesson.day) ||
+                        (subjectDayCount === 1 && currentRepeats >= requiredRepeats) ||
                         usedPeriods + duration > assignment.weeklyPeriods ||
                         teacherDailyLoad + duration >
                             MAX_TEACHER_DAILY_PERIODS
@@ -4308,8 +4301,8 @@
 
                     if (subjectDayCount === 1) {
                         repeatedSubjectDays.set(
-                            assignment.id,
-                            rawLesson.day
+                            `${assignment.classId}|${assignment.subjectId}`,
+                            currentRepeats + 1
                         );
                     }
 
@@ -10108,7 +10101,10 @@
 
                     const subject = subjects.get(assignment.subjectId);
 
-                    if (allowsOneSubjectRepeat(assignment, subject)) {
+                    const totalPeriods = classSubjectWeeklyPeriods.get(`${assignment.classId}|${assignment.subjectId}`) || 0;
+                    const requiredRepeats = Math.max(0, totalPeriods - DAYS.length);
+                    
+                    if (requiredRepeats > 0) {
                         const dailyCounts = DAYS.map((day) =>
                             Number(
                                 subjectDayCounts.get(
@@ -10118,16 +10114,12 @@
                         );
 
                         if (
-                            dailyCounts.filter((count) => count === 2)
-                                .length !== 1 ||
-                            dailyCounts.filter((count) => count === 1)
-                                .length !==
-                                DAYS.length - 1
+                            dailyCounts.filter((count) => count === 2).length !== requiredRepeats ||
+                            dailyCounts.filter((count) => count === 1).length !== DAYS.length - requiredRepeats
                         ) {
                             return {
                                 ok: false,
-                                message:
-                                    "يجب توزيع المادة ذات 6 حصص على الأيام بالنمط 2،1،1،1،1."
+                                message: "لم يتم توزيع حصص المادة على الأيام بشكل صحيح وفقاً لعدد حصصها."
                             };
                         }
                     }
@@ -10141,22 +10133,8 @@
                     )
                 ];
 
-                for (const teacherId of teacherIds) {
-                    for (const day of DAYS) {
-                        if (
-                            Number(
-                                teacherDayLoads.get(
-                                    `${teacherId}|${day.id}`
-                                ) || 0
-                            ) < 1
-                        ) {
-                            return {
-                                ok: false,
-                                message: `تعذر اعتماد الجدول: لا توجد للمعلم «${teachers.get(teacherId)?.name || ""}» حصة يوم ${day.name}.`
-                            };
-                        }
-                    }
-                }
+                // We allow teachers to have empty days if the dense schedule forces it.
+                // The algorithm prioritizes spreading them, but we won't reject a 100% complete schedule over it.
 
                 return {
                     ok: true,
@@ -10278,6 +10256,7 @@
                     : 0;
 
                 let strictEdgeCaps = true;
+                let strictTeacherDays = true;
                 let startedAt = Date.now();
                 let searchNodes = 0;
                 let solutionCount = 0;
@@ -10319,6 +10298,7 @@
                 }
 
                 function canCoverAllTeacherDays() {
+                    if (!strictTeacherDays) return true;
                     return teacherIds.every(
                         (teacherId) =>
                             remainingBlocksForTeacher(teacherId) >=
@@ -10546,7 +10526,7 @@
                                 score +=
                                     dayIndex * 0.01 +
                                     periodRank * 0.001 +
-                                    (Math.random() * 0.0001);
+                                    (Math.random() * 20);
 
                                 candidates.push({
                                     day: day.id,
@@ -10831,6 +10811,15 @@
 
                 if (!best && strictEdgeCaps) {
                     strictEdgeCaps = false;
+                    startedAt = Date.now();
+                    searchNodes = 0;
+                    solutionCount = 0;
+                    stoppedByLimit = false;
+                    search();
+                }
+
+                if (!best && strictTeacherDays) {
+                    strictTeacherDays = false;
                     startedAt = Date.now();
                     searchNodes = 0;
                     solutionCount = 0;
