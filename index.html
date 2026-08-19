@@ -7823,9 +7823,9 @@
 
                 $("#scheduleHead").innerHTML = `
                     <tr>
-                        <th>الحصة</th>
-                        ${DAYS.map(
-                            (day) => `<th>${escapeHTML(day.name)}</th>`
+                        <th>اليوم</th>
+                        ${PERIODS.map(
+                            (period) => `<th>الحصة ${period}</th>`
                         ).join("")}
                     </tr>
                 `;
@@ -7833,7 +7833,7 @@
                 if (!schoolClass) {
                     $("#scheduleBody").innerHTML = `
                         <tr>
-                            <td colspan="6">
+                            <td colspan="${PERIODS.length + 1}">
                                 <div class="empty-state">أضف فصلاً لعرض الجدول.</div>
                             </td>
                         </tr>
@@ -7846,8 +7846,8 @@
                 $("#scheduleCaption").textContent =
                     `الجدول الحالي: ${stage?.name || ""} — ${schoolClass.name}`;
 
-                $("#scheduleBody").innerHTML = PERIODS.map((period) => {
-                    const cells = DAYS.map((day) => {
+                $("#scheduleBody").innerHTML = DAYS.map((day) => {
+                    const cells = PERIODS.map((period) => {
                         const lesson = scheduleLessonAt(
                             schoolClass.id,
                             day.id,
@@ -7929,7 +7929,7 @@
 
                     return `
                         <tr>
-                            <td>الحصة ${period}</td>
+                            <td>${escapeHTML(day.name)}</td>
                             ${cells}
                         </tr>
                     `;
