@@ -4271,8 +4271,10 @@
                     );
 
                     const totalPeriods = classSubjectWeeklyPeriods.get(`${assignment.classId}|${assignment.subjectId}`) || 0;
-                    const requiredRepeats = Math.max(0, totalPeriods - DAYS.length);
-                    const currentRepeats = Number(repeatedSubjectDays.get(`${assignment.classId}|${assignment.subjectId}`) || 0);
+                    const basePerDay = Math.floor(totalPeriods / DAYS.length);
+                    const extraDays = totalPeriods % DAYS.length;
+                    const maxAllowedPerDay = basePerDay + (extraDays > 0 ? 1 : 0);
+                    const currentExtraDays = Number(repeatedSubjectDays.get(`${assignment.classId}|${assignment.subjectId}`) || 0);
 
                     const usedPeriods = Number(
                         assignmentUsage.get(assignment.id) || 0
@@ -4287,9 +4289,8 @@
                     if (
                         keys.some((key) => occupied.has(key)) ||
                         teacherKeys.some((key) => teacherOccupied.has(key)) ||
-                        (requiredRepeats === 0 && subjectDayCount >= 1) ||
-                        subjectDayCount >= 2 ||
-                        (subjectDayCount === 1 && currentRepeats >= requiredRepeats) ||
+                        subjectDayCount >= maxAllowedPerDay ||
+                        (subjectDayCount === basePerDay && extraDays > 0 && currentExtraDays >= extraDays) ||
                         usedPeriods + duration > assignment.weeklyPeriods ||
                         teacherDailyLoad + duration > maxDailyPeriodsForTeacher
                     ) {
@@ -4305,10 +4306,10 @@
                         subjectDayCount + 1
                     );
 
-                    if (subjectDayCount === 1) {
+                    if (subjectDayCount === basePerDay && extraDays > 0) {
                         repeatedSubjectDays.set(
                             `${assignment.classId}|${assignment.subjectId}`,
-                            currentRepeats + 1
+                            currentExtraDays + 1
                         );
                     }
 
@@ -10114,9 +10115,10 @@
                     const subject = subjects.get(assignment.subjectId);
 
                     const totalPeriods = classSubjectWeeklyPeriods.get(`${assignment.classId}|${assignment.subjectId}`) || 0;
-                    const requiredRepeats = Math.max(0, totalPeriods - DAYS.length);
+                    const basePerDay = Math.floor(totalPeriods / DAYS.length);
+                    const extraDays = totalPeriods % DAYS.length;
                     
-                    if (requiredRepeats > 0) {
+                    if (extraDays > 0) {
                         const dailyCounts = DAYS.map((day) =>
                             Number(
                                 subjectDayCounts.get(
@@ -10126,8 +10128,8 @@
                         );
 
                         if (
-                            dailyCounts.filter((count) => count === 2).length !== requiredRepeats ||
-                            dailyCounts.filter((count) => count === 1).length !== DAYS.length - requiredRepeats
+                            dailyCounts.filter((count) => count === basePerDay + 1).length !== extraDays ||
+                            dailyCounts.filter((count) => count === basePerDay).length !== DAYS.length - extraDays
                         ) {
                             return {
                                 ok: false,
@@ -10330,8 +10332,9 @@
                     return groups.every((group) => {
                         const assignment = group.assignment;
                         const totalPeriods = classSubjectWeeklyPeriods.get(`${assignment.classId}|${assignment.subjectId}`) || 0;
-                        const requiredRepeats = Math.max(0, totalPeriods - DAYS.length);
-                        if (requiredRepeats === 0) {
+                        const basePerDay = Math.floor(totalPeriods / DAYS.length);
+                        const extraDays = totalPeriods % DAYS.length;
+                        if (extraDays === 0) {
                             return true;
                         }
 
@@ -10344,8 +10347,8 @@
                         );
 
                         return (
-                            dailyCounts.filter((count) => count === 2).length === requiredRepeats &&
-                            dailyCounts.filter((count) => count === 1).length === DAYS.length - requiredRepeats
+                            dailyCounts.filter((count) => count === basePerDay + 1).length === extraDays &&
+                            dailyCounts.filter((count) => count === basePerDay).length === DAYS.length - extraDays
                         );
                     });
                 }
@@ -10407,14 +10410,16 @@
                                 );
 
                                 const totalPeriods = classSubjectWeeklyPeriods.get(`${assignment.classId}|${assignment.subjectId}`) || 0;
-                                const requiredRepeats = Math.max(0, totalPeriods - DAYS.length);
-                                const currentRepeats = Number(repeatedSubjectDays.get(`${assignment.classId}|${assignment.subjectId}`) || 0);
+                                const basePerDay = Math.floor(totalPeriods / DAYS.length);
+                                const extraDays = totalPeriods % DAYS.length;
+                                const maxAllowedPerDay = basePerDay + (extraDays > 0 ? 1 : 0);
+                                const currentExtraDays = Number(repeatedSubjectDays.get(`${assignment.classId}|${assignment.subjectId}`) || 0);
 
-                                if (
-                                    (requiredRepeats === 0 && subjectDayCount >= 1) ||
-                                    subjectDayCount >= 2 ||
-                                    (subjectDayCount === 1 && currentRepeats >= requiredRepeats)
-                                ) {
+                                if (subjectDayCount >= maxAllowedPerDay) {
+                                    return;
+                                }
+
+                                if (subjectDayCount === basePerDay && extraDays > 0 && currentExtraDays >= extraDays) {
                                     return;
                                 }
 
@@ -10596,7 +10601,11 @@
                         1
                     );
 
-                    if (subjectDayCount === 1) {
+                    const totalPeriods = classSubjectWeeklyPeriods.get(`${assignment.classId}|${assignment.subjectId}`) || 0;
+                    const basePerDay = Math.floor(totalPeriods / DAYS.length);
+                    const extraDays = totalPeriods % DAYS.length;
+
+                    if (subjectDayCount === basePerDay && extraDays > 0) {
                         adjustMap(
                             repeatedSubjectDays,
                             `${assignment.classId}|${assignment.subjectId}`,
@@ -10672,7 +10681,11 @@
                         -1
                     );
 
-                    if (subjectDayCount === 2) {
+                    const totalPeriods = classSubjectWeeklyPeriods.get(`${assignment.classId}|${assignment.subjectId}`) || 0;
+                    const basePerDay = Math.floor(totalPeriods / DAYS.length);
+                    const extraDays = totalPeriods % DAYS.length;
+
+                    if (subjectDayCount === basePerDay + 1 && extraDays > 0) {
                         adjustMap(
                             repeatedSubjectDays,
                             `${assignment.classId}|${assignment.subjectId}`,
