@@ -3417,8 +3417,8 @@
             const PERIODS = [1, 2, 3, 4, 5, 6, 7];
             const MAX_TEACHER_DAILY_PERIODS = 5;
             const MAX_REGULAR_WEEKLY_PERIODS = DAYS.length + 1;
-            const AUTO_SEARCH_NODE_LIMIT = 2000000;
-            const AUTO_SEARCH_TIME_LIMIT_MS = 15000;
+            const AUTO_SEARCH_NODE_LIMIT = 200000;
+            const AUTO_SEARCH_TIME_LIMIT_MS = 2000;
 
             const $ = (selector) => document.querySelector(selector);
 
@@ -10814,8 +10814,9 @@
                 if (!best) {
                     return {
                         ok: false,
+                        stoppedByLimit: stoppedByLimit,
                         message: stoppedByLimit
-                            ? "تعذر إيجاد جدول كامل يضمن حصة لكل معلم في كل يوم ضمن وقت البحث. راجع الأنصبة والتعارضات."
+                            ? "تعذر إيجاد جدول كامل يضمن حصة لكل معلم في كل يوم ضمن محاولة البحث الحالية."
                             : "لا يمكن إنشاء جدول يحقق التكليفات مع شرط وجود حصة لكل معلم مكلّف في كل يوم."
                     };
                 }
@@ -10868,13 +10869,29 @@
                     );
 
                     try {
-                        const plan = buildAutomaticSchedulePlan(state);
+                        let plan = null;
+                        const maxAttempts = 15;
+                        
+                        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                            button.textContent = `جارٍ إنشاء الجدول... (محاولة ${attempt}/${maxAttempts})`;
+                            await new Promise((resolve) => setTimeout(resolve, 30));
+                            
+                            plan = buildAutomaticSchedulePlan(state);
+                            
+                            if (plan.ok) {
+                                break;
+                            }
+                            if (!plan.stoppedByLimit) {
+                                // Failed due to impossible logic, no need to retry
+                                break;
+                            }
+                        }
 
-                        if (!plan.ok) {
+                        if (!plan || !plan.ok) {
                             const result = $("#autoScheduleResult");
                             result.className = "auto-result error hint";
-                            result.textContent = plan.message;
-                            showToast(plan.message, "error");
+                            result.textContent = plan ? plan.message : "حدث خطأ غير متوقع.";
+                            showToast(plan ? plan.message : "حدث خطأ غير متوقع.", "error");
                             return;
                         }
 
