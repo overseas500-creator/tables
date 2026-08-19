@@ -10765,6 +10765,152 @@
                     }
                 }
 
+
+                function repairPhase() {
+                    let currentDraft = bestPartial.map(l => ({...l}));
+                    let unplaced = [];
+                    currentDraft.forEach((l, idx) => l.tempId = idx);
+                    let tempIdCounter = currentDraft.length;
+                    
+                    for (const g of groups) {
+                        let placedCount = currentDraft.filter(l => l.assignmentId === g.assignment.id).length;
+                        let required = Math.floor(Number(g.assignment.weeklyPeriods) / g.duration);
+                        for(let i = placedCount; i < required; i++) {
+                            unplaced.push(g);
+                        }
+                    }
+
+                    let iterations = 0;
+                    const MAX_ITER = 20000;
+                    
+                    function getConflicts(g, dayId, startPeriod) {
+                        let conflicts = [];
+                        let endPeriod = startPeriod + g.duration - 1;
+                        if (endPeriod > PERIODS.length) return null;
+                        
+                        for(let p = startPeriod; p <= endPeriod; p++) {
+                            let classConflict = currentDraft.find(l => l.classId === g.assignment.classId && l.day === dayId && p >= l.startPeriod && p < l.startPeriod + l.duration);
+                            if (classConflict && !conflicts.includes(classConflict)) conflicts.push(classConflict);
+                            
+                            let teacherConflict = currentDraft.find(l => l.teacherId === g.assignment.teacherId && l.day === dayId && p >= l.startPeriod && p < l.startPeriod + l.duration);
+                            if (teacherConflict && !conflicts.includes(teacherConflict)) conflicts.push(teacherConflict);
+                        }
+                        
+                        const totalPeriods = classSubjectWeeklyPeriods.get(g.assignment.classId + '|' + g.assignment.subjectId) || 0;
+                        const basePerDay = Math.floor(totalPeriods / DAYS.length);
+                        const extraDays = totalPeriods % DAYS.length;
+                        const maxAllowedPerDay = basePerDay + (extraDays > 0 ? 1 : 0);
+                        
+                        let subjectLessons = currentDraft.filter(l => l.classId === g.assignment.classId && l.subjectId === g.assignment.subjectId && l.day === dayId);
+                        
+                        if (subjectLessons.length + 1 > maxAllowedPerDay) {
+                            for (let l of subjectLessons) {
+                                if (!conflicts.includes(l)) {
+                                    conflicts.push(l);
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        let maxDailyPeriodsForTeacher = Math.max(MAX_TEACHER_DAILY_PERIODS, Math.ceil((teacherWeeklyPeriods.get(g.assignment.teacherId) || 0) / DAYS.length));
+                        if ((teacherWeeklyPeriods.get(g.assignment.teacherId) || 0) > 20) {
+                            maxDailyPeriodsForTeacher = Math.max(maxDailyPeriodsForTeacher, 6);
+                        }
+                        
+                        let teacherLessons = currentDraft.filter(l => l.teacherId === g.assignment.teacherId && l.day === dayId);
+                        let teacherLoad = teacherLessons.reduce((sum, l) => sum + l.duration, 0);
+                        
+                        if (teacherLoad + g.duration > maxDailyPeriodsForTeacher) {
+                            let neededReduction = (teacherLoad + g.duration) - maxDailyPeriodsForTeacher;
+                            let reduced = 0;
+                            for (let l of teacherLessons) {
+                                if (!conflicts.includes(l)) {
+                                    conflicts.push(l);
+                                    reduced += l.duration;
+                                    if (reduced >= neededReduction) break;
+                                }
+                            }
+                        }
+                        
+                        return conflicts;
+                    }
+                    
+                    let tabu = new Map();
+
+                    while (unplaced.length > 0 && iterations < MAX_ITER && Date.now() - startedAt < AUTO_SEARCH_TIME_LIMIT_MS) {
+                        iterations++;
+                        
+                        let unplacedIndex = Math.floor(Math.random() * unplaced.length);
+                        let g = unplaced[unplacedIndex];
+                        
+                        let bestSlots = [];
+                        let minConflicts = Infinity;
+                        
+                        for (const day of DAYS) {
+                            for (let startPeriod = 1; startPeriod <= PERIODS.length; startPeriod++) {
+                                let conflicts = getConflicts(g, day.id, startPeriod);
+                                if (conflicts === null) continue;
+                                
+                                let penalty = 0;
+                                for (let c of conflicts) {
+                                    if (tabu.has(c.tempId)) {
+                                        penalty += 5;
+                                    }
+                                }
+                                
+                                let score = conflicts.length + penalty;
+                                
+                                if (score < minConflicts) {
+                                    minConflicts = score;
+                                    bestSlots = [{day: day.id, startPeriod, conflicts}];
+                                } else if (score === minConflicts) {
+                                    bestSlots.push({day: day.id, startPeriod, conflicts});
+                                }
+                            }
+                        }
+                        
+                        if (bestSlots.length > 0) {
+                            let chosen = bestSlots[Math.floor(Math.random() * bestSlots.length)];
+                            
+                            for (let c of chosen.conflicts) {
+                                currentDraft = currentDraft.filter(l => l !== c);
+                                let bumpedGroup = groups.find(grp => grp.assignment.id === c.assignmentId);
+                                if (bumpedGroup) unplaced.push(bumpedGroup);
+                            }
+                            
+                            tempIdCounter++;
+                            let newLesson = {
+                                tempId: tempIdCounter,
+                                assignmentId: g.assignment.id,
+                                classId: g.assignment.classId,
+                                day: chosen.day,
+                                startPeriod: chosen.startPeriod,
+                                duration: g.duration,
+                                subjectId: g.assignment.subjectId,
+                                teacherId: g.assignment.teacherId
+                            };
+                            currentDraft.push(newLesson);
+                            
+                            tabu.set(newLesson.tempId, iterations + Math.floor(Math.random() * 5) + 3);
+                            
+                            for (let [id, expiry] of tabu.entries()) {
+                                if (iterations >= expiry) tabu.delete(id);
+                            }
+                            
+                            unplaced.splice(unplacedIndex, 1);
+                        }
+                    }
+                    
+                    if (unplaced.length < minPending) {
+                        minPending = unplaced.length;
+                        bestPartial = currentDraft.map(l => {
+                            let clone = {...l};
+                            delete clone.tempId;
+                            return clone;
+                        });
+                    }
+                }
+
                 function search() {
                     searchNodes += 1;
 
@@ -10934,6 +11080,7 @@
                         g.placementOrders = [];
                     }
                     groups.sort((a, b) => b.assignment.weeklyPeriods - a.assignment.weeklyPeriods);
+                    repairPhase();
                     search();
                 }
 
