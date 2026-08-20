@@ -4085,6 +4085,7 @@
                     schedule: Array.isArray(raw.schedule)
                         ? raw.schedule
                         : fallback.schedule,
+                    dailyPeriods: raw.dailyPeriods || fallback.dailyPeriods,
                     generalScheduleApproval:
                         raw.generalScheduleApproval &&
                         typeof raw.generalScheduleApproval === "object" &&
@@ -7991,6 +7992,9 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                             lesson = state.schedule.find(l => l.teacherId === teacherObj.id && lessonOccupies(l, day.id, period));
                         }
 
+                        if (period > getDailyPeriods(day.id)) {
+                            return `<td class="schedule-slot" style="background-color: #f1f5f9; border: 1px dashed #cbd5e1; cursor: not-allowed;" title="حصة غير مفعلة"></td>`;
+                        }
                         if (!lesson) {
                             return `
                                 <td
