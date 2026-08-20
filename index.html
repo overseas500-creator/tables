@@ -12088,6 +12088,23 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                     activeClassId = event.target.value;
                     currentPlacement = null;
                     clearDropMarkers();
+                    
+                    const assignedTeacherIds = new Set(
+                        state.teachingAssignments
+                            .filter((assignment) => assignment.classId === activeClassId)
+                            .map((assignment) => assignment.teacherId)
+                    );
+                    const assignedTeachers = state.teachers.filter((teacher) =>
+                        assignedTeacherIds.has(teacher.id)
+                    );
+                    populateSelect(
+                        $("#bankTeacherSelect"),
+                        assignedTeachers,
+                        assignedTeachers.length
+                            ? "اختر المعلم..."
+                            : "لا يوجد تكليفات"
+                    );
+                    
                     renderSchedule();
                 }
             );
@@ -12114,6 +12131,21 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                 activeTeacherScheduleId = e.target.value;
                 currentPlacement = null;
                 clearDropMarkers();
+                
+                const assignedClassIds = new Set(
+                    state.teachingAssignments
+                        .filter((assignment) => assignment.teacherId === activeTeacherScheduleId)
+                        .map((assignment) => assignment.classId)
+                );
+                const assignedClasses = state.classes.filter((cls) => assignedClassIds.has(cls.id));
+                populateSelect(
+                    $("#bankClassSelect"), 
+                    assignedClasses, 
+                    assignedClasses.length ? "اختر الفصل..." : "لا يوجد تكليفات", 
+                    null, 
+                    (item) => `${stageById(item.stageId)?.name || ""} - ${item.name}`
+                );
+                
                 renderSchedule();
             });
 
