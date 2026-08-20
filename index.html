@@ -7231,6 +7231,32 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                     );
             }
 
+            
+            // Initialize daily periods form
+            function renderDailyPeriodsSettings() {
+                if (!state.dailyPeriods) state.dailyPeriods = {};
+                DAYS.forEach(day => {
+                    const select = document.getElementById("dp_" + day.id);
+                    if (select) {
+                        select.value = getDailyPeriods(day.id);
+                    }
+                });
+            }
+
+            document.getElementById("dailyPeriodsForm")?.addEventListener("submit", (e) => {
+                e.preventDefault();
+                if (!state.dailyPeriods) state.dailyPeriods = {};
+                DAYS.forEach(day => {
+                    const select = document.getElementById("dp_" + day.id);
+                    if (select) {
+                        state.dailyPeriods[day.id] = parseInt(select.value, 10);
+                    }
+                });
+                saveState();
+                showToast("تم حفظ إعدادات الحصص اليومية بنجاح.", "success");
+                renderSchedule();
+            });
+
             function renderBasicData() {
                 $("#schoolNameInput").value =
                     state.school.name || "";
@@ -8522,6 +8548,7 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
             function renderAll() {
                 renderStats();
                 renderBasicData();
+                renderDailyPeriodsSettings();
                 renderSelects();
                 renderStages();
                 renderClasses();
