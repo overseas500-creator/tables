@@ -2975,15 +2975,33 @@
                     </button>
                 </div>
 
-                <div class="schedule-toolbar">
-                    <div class="field">
-                        <label for="scheduleClassSelect">الفصل الحالي</label>
+                <div class="schedule-toolbar" style="align-items: end;">
+                    <div class="field" style="flex: 0 0 auto;">
+                        <label>نمط العرض</label>
+                        <select id="scheduleViewModeSelect" class="control" style="background-color: #e2e8f0; font-weight: bold; padding: 4px;">
+                            <option value="class">حسب الفصل</option>
+                            <option value="teacher">حسب المعلم</option>
+                        </select>
+                    </div>
+
+                    <div class="field" id="classModeFields1">
+                        <label for="scheduleClassSelect">اختر الفصل</label>
                         <select id="scheduleClassSelect" class="control"></select>
                     </div>
 
-                    <div class="field">
-                        <label for="bankTeacherSelect">المعلم المكلف للفصل</label>
+                    <div class="field" id="classModeFields2">
+                        <label for="bankTeacherSelect">اختر المعلم (لعرض التكليفات)</label>
                         <select id="bankTeacherSelect" class="control"></select>
+                    </div>
+
+                    <div class="field" id="teacherModeFields1" style="display: none;">
+                        <label for="scheduleTeacherViewSelect">اختر المعلم</label>
+                        <select id="scheduleTeacherViewSelect" class="control"></select>
+                    </div>
+
+                    <div class="field" id="teacherModeFields2" style="display: none;">
+                        <label for="bankClassSelect">اختر الفصل (لعرض التكليفات)</label>
+                        <select id="bankClassSelect" class="control"></select>
                     </div>
 
                     <div class="field">
@@ -4345,6 +4363,8 @@
 
             let state = loadState();
             let activeClassId = state.classes[0]?.id || "";
+let activeTeacherScheduleId = state.teachers[0]?.id || "";
+let scheduleViewMode = 'class'; // 'class' or 'teacher'
             let selectedAbsentTeacherIds = state.waitingData?.absentTeacherIds || [];
             let currentPlacement = null;
             let activeDrag = null;
@@ -7285,13 +7305,25 @@
                     classes.length ? null : "لا توجد فصول",
                     activeClassId,
                     (item) =>
-                        `${stageById(item.stageId)?.name || ""} — ${
-                            item.name
-                        }`
+                        `${stageById(item.stageId)?.name || ""} — ${item.name}`
                 );
 
-                activeClassId =
-                    $("#scheduleClassSelect").value || "";
+                activeClassId = $("#scheduleClassSelect").value || "";
+
+                if (!teachers.some((item) => item.id === activeTeacherScheduleId)) {
+                    activeTeacherScheduleId = teachers[0]?.id || "";
+                }
+                populateSelect($("#scheduleTeacherViewSelect"), teachers, teachers.length ? null : "لا يوجد معلمون", activeTeacherScheduleId, (item) => item.name);
+                activeTeacherScheduleId = $("#scheduleTeacherViewSelect")?.value || "";
+
+                const assignedClassIds = new Set(
+                    state.teachingAssignments
+                        .filter((assignment) => assignment.teacherId === activeTeacherScheduleId)
+                        .map((assignment) => assignment.classId)
+                );
+                const assignedClasses = classes.filter((cls) => assignedClassIds.has(cls.id));
+                populateSelect($("#bankClassSelect"), assignedClasses, assignedClasses.length ? "اختر الفصل المكلف به" : "لا توجد تكليفات لهذا المعلم", null, (item) => `${stageById(item.stageId)?.name || ""} — ${item.name}`);
+
 
                 populateSelect(
                     $("#assignmentTeacherSelect"),
@@ -7733,35 +7765,41 @@
             }
 
             function renderLessonBank() {
-                const schoolClass = classById(activeClassId);
                 const bank = $("#lessonBank");
-
-                if (!schoolClass) {
-                    bank.innerHTML =
-                        '<div class="empty-state" style="width:100%;">أضف فصلاً أولاً.</div>';
-                    return;
+                let assignments = [];
+                
+                if (scheduleViewMode === 'class') {
+                    const schoolClass = classById(activeClassId);
+                    if (!schoolClass) {
+                        bank.innerHTML = '<div class="empty-state" style="width:100%;">أضف فصلاً أولاً.</div>';
+                        return;
+                    }
+                    const teacherId = $("#bankTeacherSelect").value;
+                    if (!teacherId) {
+                        bank.innerHTML = '<div class="empty-state" style="width:100%;">اختر معلماً مكلفاً بهذا الفصل لعرض مواده.</div>';
+                        return;
+                    }
+                    assignments = state.teachingAssignments.filter(
+                        (assignment) => assignment.classId === schoolClass.id && assignment.teacherId === teacherId
+                    );
+                } else {
+                    const teacher = teacherById(activeTeacherScheduleId);
+                    if (!teacher) {
+                        bank.innerHTML = '<div class="empty-state" style="width:100%;">أضف معلماً أولاً.</div>';
+                        return;
+                    }
+                    const classId = $("#bankClassSelect").value;
+                    if (!classId) {
+                        bank.innerHTML = '<div class="empty-state" style="width:100%;">اختر فصلاً لعرض التكليفات.</div>';
+                        return;
+                    }
+                    assignments = state.teachingAssignments.filter(
+                        (assignment) => assignment.teacherId === teacher.id && assignment.classId === classId
+                    );
                 }
-
-                const teacherId = $("#bankTeacherSelect").value;
-
-                if (!teacherId) {
-                    bank.innerHTML = `
-                        <div class="empty-state" style="width:100%;">
-                            اختر معلماً مكلفاً بهذا الفصل لعرض مواده.
-                        </div>
-                    `;
-                    return;
-                }
-
-                const assignments = state.teachingAssignments.filter(
-                    (assignment) =>
-                        assignment.classId === schoolClass.id &&
-                        assignment.teacherId === teacherId
-                );
 
                 if (!assignments.length) {
-                    bank.innerHTML =
-                        '<div class="empty-state" style="width:100%;">لا توجد مواد مرتبطة بهذا المعلم والفصل.</div>';
+                    bank.innerHTML = '<div class="empty-state" style="width:100%;">لا توجد مواد مرتبطة.</div>';
                     return;
                 }
 
@@ -7789,18 +7827,18 @@
                                 style="--subject-color:${safeColor(subject?.color)};"
                                 title="${
                                     disabled
-                                        ? "اكتمل العدد الأسبوعي لهذا التكليف"
-                                        : "اسحب المادة إلى الجدول"
+                                        ? "استنفدت حصص التكليف لهذا الأسبوع"
+                                        : "اسحب الحصة لإدراجها في الجدول"
                                 }"
                                 ${disabled ? "disabled" : ""}
                             >
                                 ${escapeHTML(subject?.name || "")}
-                                <span>متبقي ${remaining}/${Number(
+                                <span>الباقي ${remaining}/${Number(
                                     assignment.weeklyPeriods
                                 )}</span>
                                 ${
                                     isArtSubject(subject)
-                                        ? "<span>2×</span>"
+                                        ? "<span>2ح</span>"
                                         : ""
                                 }
                             </button>
@@ -7823,6 +7861,7 @@
 
             function renderSchedule() {
                 const schoolClass = classById(activeClassId);
+                const teacherObj = teacherById(activeTeacherScheduleId);
 
                 renderLessonBank();
 
@@ -7835,7 +7874,7 @@
                     </tr>
                 `;
 
-                if (!schoolClass) {
+                if (scheduleViewMode === 'class' && !schoolClass) {
                     $("#scheduleBody").innerHTML = `
                         <tr>
                             <td colspan="${PERIODS.length + 1}">
@@ -7845,27 +7884,43 @@
                     `;
                     return;
                 }
+                
+                if (scheduleViewMode === 'teacher' && !teacherObj) {
+                    $("#scheduleBody").innerHTML = `
+                        <tr>
+                            <td colspan="${PERIODS.length + 1}">
+                                <div class="empty-state">أضف معلماً لعرض الجدول.</div>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
 
-                const stage = stageById(schoolClass.stageId);
-
-                $("#scheduleCaption").textContent =
-                    `الجدول الحالي: ${stage?.name || ""} — ${schoolClass.name}`;
+                if (scheduleViewMode === 'class') {
+                    const stage = stageById(schoolClass.stageId);
+                    $("#scheduleCaption").textContent =
+                        `الجدول الحالي: ${stage?.name || ""} — ${schoolClass.name}`;
+                } else {
+                    $("#scheduleCaption").textContent =
+                        `الجدول الحالي: المعلم — ${teacherObj.name}`;
+                }
 
                 $("#scheduleBody").innerHTML = DAYS.map((day) => {
                     const cells = PERIODS.map((period) => {
-                        const lesson = scheduleLessonAt(
-                            schoolClass.id,
-                            day.id,
-                            period
-                        );
+                        let lesson = null;
+                        if (scheduleViewMode === 'class') {
+                            lesson = scheduleLessonAt(schoolClass.id, day.id, period);
+                        } else {
+                            lesson = state.schedule.find(l => l.teacherId === teacherObj.id && lessonOccupies(l, day.id, period));
+                        }
 
                         if (!lesson) {
                             return `
                                 <td
                                     class="schedule-slot"
-                                    data-class-id="${escapeHTML(schoolClass.id)}"
                                     data-day="${day.id}"
                                     data-period="${period}"
+                                    ${scheduleViewMode === 'class' ? `data-class-id="${escapeHTML(schoolClass.id)}"` : `data-teacher-id="${escapeHTML(teacherObj.id)}"`}
                                 >
                                     <div class="slot-placeholder">اسحب الحصة هنا</div>
                                 </td>
@@ -7874,6 +7929,7 @@
 
                         const subject = subjectById(lesson.subjectId);
                         const teacher = teacherById(lesson.teacherId);
+                        const cls = classById(lesson.classId);
                         const duration = durationOf(lesson);
                         const offset =
                             period - Number(lesson.startPeriod);
@@ -7882,9 +7938,9 @@
                         return `
                             <td
                                 class="schedule-slot"
-                                data-class-id="${escapeHTML(schoolClass.id)}"
                                 data-day="${day.id}"
                                 data-period="${period}"
+                                ${scheduleViewMode === 'class' ? `data-class-id="${escapeHTML(schoolClass.id)}"` : `data-teacher-id="${escapeHTML(teacherObj.id)}"`}
                             >
                                 <article
                                     draggable="true"
@@ -7916,9 +7972,7 @@
                                         subject?.name || "مادة محذوفة"
                                     )}</strong>
 
-                                    <small>${escapeHTML(
-                                        teacher?.name || "معلم غير محدد"
-                                    )}</small>
+                                    <small>${scheduleViewMode === 'class' ? escapeHTML(teacher?.name || "معلم محذوف") : escapeHTML(cls?.name || "فصل محذوف")}</small>
 
                                     ${
                                         art
@@ -11354,14 +11408,14 @@
             function startTemplatePlacement(assignmentId) {
                 const assignment = assignmentById(assignmentId);
 
-                if (
-                    !assignment ||
-                    assignment.classId !== activeClassId
-                ) {
-                    showToast(
-                        "هذا التكليف غير صالح للفصل الحالي.",
-                        "error"
-                    );
+                if (!assignment) return null;
+                
+                if (scheduleViewMode === 'class' && assignment.classId !== activeClassId) {
+                    showToast("هذا التكليف غير صالح للفصل الحالي.", "error");
+                    return null;
+                }
+                if (scheduleViewMode === 'teacher' && assignment.teacherId !== activeTeacherScheduleId) {
+                    showToast("هذا التكليف غير صالح للمعلم الحالي.", "error");
                     return null;
                 }
 
@@ -11370,11 +11424,13 @@
                     assignmentId: assignment.id,
                     subjectId: assignment.subjectId,
                     teacherId: assignment.teacherId,
+                    classId: assignment.classId,
                     offset: 0
                 };
 
                 currentPlacement = payload;
-
+                renderSchedule();
+                
                 $("#placementHint").textContent =
                     "تم تحديد المادة. اضغط الحصة المطلوبة أو اسحب المادة إليها.";
 
@@ -11392,7 +11448,12 @@
             }
 
             function planPlacement(payload, target) {
-                const classId = String(target.classId || "");
+                let targetClassId = target.classId || payload.classId;
+                if (payload.kind === "move") {
+                    const src = state.schedule.find(l => l.id === payload.lessonId);
+                    if (src) targetClassId = src.classId;
+                }
+                const classId = String(targetClassId || "");
                 const day = String(target.day || "");
                 const targetPeriod = Number(target.period);
 
@@ -11909,10 +11970,38 @@
                 (event) => {
                     activeClassId = event.target.value;
                     currentPlacement = null;
-                    renderSelects();
+                    clearDropMarkers();
                     renderSchedule();
                 }
             );
+
+            $("#scheduleViewModeSelect")?.addEventListener("change", (e) => {
+                scheduleViewMode = e.target.value;
+                if (scheduleViewMode === 'class') {
+                    $("#classModeFields1").style.display = "block";
+                    $("#classModeFields2").style.display = "block";
+                    $("#teacherModeFields1").style.display = "none";
+                    $("#teacherModeFields2").style.display = "none";
+                } else {
+                    $("#classModeFields1").style.display = "none";
+                    $("#classModeFields2").style.display = "none";
+                    $("#teacherModeFields1").style.display = "block";
+                    $("#teacherModeFields2").style.display = "block";
+                }
+                currentPlacement = null;
+                clearDropMarkers();
+                renderSchedule();
+            });
+
+            $("#scheduleTeacherViewSelect")?.addEventListener("change", (e) => {
+                activeTeacherScheduleId = e.target.value;
+                currentPlacement = null;
+                clearDropMarkers();
+                renderSchedule();
+            });
+
+            $("#bankClassSelect")?.addEventListener("change", renderLessonBank);
+
 
             $("#bankTeacherSelect").addEventListener(
                 "change",
