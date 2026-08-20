@@ -11324,7 +11324,9 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
             const preCheckBtn = document.getElementById("preCheckConflictsButton");
             if (preCheckBtn) {
                 preCheckBtn.addEventListener("click", () => {
-                    const state = loadState();
+                    // FIX: DO NOT shadow the global state variable by reloading from storage!
+                    // This caused the pre-check to show default data if local storage wasn't synced.
+                    // const state = loadState(); // REMOVED
                     const assignments = state.teachingAssignments || [];
                     const resultDiv = document.getElementById("autoScheduleResult");
                     
