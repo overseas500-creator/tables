@@ -2545,6 +2545,48 @@
                 </div>
 
                 <div class="settings-grid">
+                    <section class="settings-panel wide" style="grid-column: 1 / -1;">
+                        <h3>إعدادات الحصص اليومية</h3>
+                        <p class="card-description" style="margin-bottom: 15px;">حدد عدد الحصص لكل يوم دراسي (على سبيل المثال: الأحد 7، الإثنين 6 حصص):</p>
+                        <form id="dailyPeriodsForm" class="form-grid" style="grid-template-columns: repeat(6, 1fr); align-items: end;">\n
+                                <div class="field">
+                                    <label for="dp_sun">الأحد</label>
+                                    <select id="dp_sun" class="control daily-period-select" data-day="sun">
+                                        <option value="1">1 حصص</option><option value="2">2 حصص</option><option value="3">3 حصص</option><option value="4">4 حصص</option><option value="5">5 حصص</option><option value="6">6 حصص</option><option value="7" selected>7 حصص</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="dp_mon">الاثنين</label>
+                                    <select id="dp_mon" class="control daily-period-select" data-day="mon">
+                                        <option value="1">1 حصص</option><option value="2">2 حصص</option><option value="3">3 حصص</option><option value="4">4 حصص</option><option value="5">5 حصص</option><option value="6">6 حصص</option><option value="7" selected>7 حصص</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="dp_tue">الثلاثاء</label>
+                                    <select id="dp_tue" class="control daily-period-select" data-day="tue">
+                                        <option value="1">1 حصص</option><option value="2">2 حصص</option><option value="3">3 حصص</option><option value="4">4 حصص</option><option value="5">5 حصص</option><option value="6">6 حصص</option><option value="7" selected>7 حصص</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="dp_wed">الأربعاء</label>
+                                    <select id="dp_wed" class="control daily-period-select" data-day="wed">
+                                        <option value="1">1 حصص</option><option value="2">2 حصص</option><option value="3">3 حصص</option><option value="4">4 حصص</option><option value="5">5 حصص</option><option value="6">6 حصص</option><option value="7" selected>7 حصص</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="dp_thu">الخميس</label>
+                                    <select id="dp_thu" class="control daily-period-select" data-day="thu">
+                                        <option value="1">1 حصص</option><option value="2">2 حصص</option><option value="3">3 حصص</option><option value="4">4 حصص</option><option value="5">5 حصص</option><option value="6">6 حصص</option><option value="7" selected>7 حصص</option>
+                                    </select>
+                                </div>
+\n                            <div class="field">
+                                <button id="saveDailyPeriodsButton" class="btn btn-primary" type="submit" style="width: 100%;">
+                                    حفظ العدد
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+
                     <section class="settings-panel">
                         <h3>المراحل الدراسية</h3>
 
@@ -3984,7 +4026,7 @@
                         subject.stageId !== schoolClass.stageId ||
                         !Number.isInteger(weeklyPeriods) ||
                         weeklyPeriods < 1 ||
-                        weeklyPeriods > DAYS.length * PERIODS.length ||
+                        weeklyPeriods > getTotalWeeklyPeriods() ||
                         seenClassSubjects.has(uniqueKey)
                     ) {
                         continue;
@@ -4141,6 +4183,15 @@
                 invalidateStaleScheduleApproval(hydrated);
 
                 return hydrated;
+            }
+
+            
+            function getDailyPeriods(dayId) {
+                if (!state || !state.dailyPeriods) return PERIODS.length;
+                return Number(state.dailyPeriods[dayId] || PERIODS.length);
+            }
+            function getTotalWeeklyPeriods() {
+                return DAYS.reduce((sum, day) => sum + getDailyPeriods(day.id), 0);
             }
 
             function loadState() {
@@ -5675,7 +5726,7 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                 const cells = [];
                 let period = PERIODS[0];
 
-                while (period <= PERIODS[PERIODS.length - 1]) {
+                while (period <= getDailyPeriods(dayId)) {
                     const startingLessons = lessons.filter(
                         (lesson) =>
                             Number(lesson.startPeriod) === period
@@ -5715,7 +5766,7 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                         1,
                         Math.min(
                             requestedSpan,
-                            PERIODS[PERIODS.length - 1] - period + 1
+                            getDailyPeriods(dayId) - period + 1
                         )
                     );
 
@@ -9026,7 +9077,7 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
 
                         return (
                             assignedPeriods + addedPeriods >
-                            DAYS.length * PERIODS.length
+                            getTotalWeeklyPeriods()
                         );
                     }
                 );
@@ -9892,7 +9943,7 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                 }
 
                 for (const [classId, total] of classTotals) {
-                    if (total > DAYS.length * PERIODS.length) {
+                    if (total > getTotalWeeklyPeriods()) {
                         errors.push(
                             `تكليفات الفصل «${classes.get(classId)?.name || ""}» تتجاوز 35 حصة.`
                         );
@@ -9944,7 +9995,7 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                         counter.firstCount += 1;
                     }
 
-                    if (endPeriod === PERIODS[PERIODS.length - 1]) {
+                    if (endPeriod === getDailyPeriods(lesson.day)) {
                         counter.lastCount += 1;
                     }
                 }
@@ -10068,7 +10119,7 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                         Number(lesson.duration) !== expectedDuration ||
                         !DAYS.some((day) => day.id === lesson.day) ||
                         startPeriod < 1 ||
-                        endPeriod > PERIODS.length
+                        (endPeriod > (typeof day !== "undefined" ? getDailyPeriods(day) : (typeof item !== "undefined" ? getDailyPeriods(item.id) : (typeof dayId !== "undefined" ? getDailyPeriods(dayId) : PERIODS.length))))
                     ) {
                         return {
                             ok: false,
@@ -10461,7 +10512,7 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                                     startPeriod;
 
                                 if (
-                                    endPeriod > PERIODS.length ||
+                                    (endPeriod > (typeof day !== "undefined" ? getDailyPeriods(day) : (typeof item !== "undefined" ? getDailyPeriods(item.id) : (typeof dayId !== "undefined" ? getDailyPeriods(dayId) : PERIODS.length)))) ||
                                     order <= lastOrder
                                 ) {
                                     return;
@@ -10539,7 +10590,7 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
 
                                 const includesFirst = startPeriod === 1;
                                 const includesLast =
-                                    endPeriod === PERIODS.length;
+                                    endPeriod === getDailyPeriods(candidate.day);
 
                                 if (
                                     strictEdgeCaps &&
@@ -10847,7 +10898,7 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                     function getConflicts(g, dayId, startPeriod) {
                         let conflicts = [];
                         let endPeriod = startPeriod + g.duration - 1;
-                        if (endPeriod > PERIODS.length) return null;
+                        if ((endPeriod > (typeof day !== "undefined" ? getDailyPeriods(day) : (typeof item !== "undefined" ? getDailyPeriods(item.id) : (typeof dayId !== "undefined" ? getDailyPeriods(dayId) : PERIODS.length))))) return null;
                         
                         for(let p = startPeriod; p <= endPeriod; p++) {
                             let classConflict = currentDraft.find(l => l.classId === g.assignment.classId && l.day === dayId && p >= l.startPeriod && p < l.startPeriod + l.duration);
@@ -10925,7 +10976,7 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                         let minConflicts = Infinity;
                         
                         for (const day of DAYS) {
-                            for (let startPeriod = 1; startPeriod <= PERIODS.length; startPeriod++) {
+                            for (let startPeriod = 1; startPeriod <= getDailyPeriods(day.id); startPeriod++) {
                                 let conflicts = getConflicts(g, day.id, startPeriod);
                                 if (conflicts === null) continue;
                                 
@@ -11255,6 +11306,13 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                     let warnings = [];
                     let fatals = [];
                     
+                    let totalTeacherPeriods = 0;
+                    let totalEmptySlots = state.classes.length * getTotalWeeklyPeriods();
+                    
+                    assignments.forEach(a => {
+                        totalTeacherPeriods += Number(a.weeklyPeriods);
+                    });
+                    
                     const teachers = new Map(state.teachers.map((item) => [item.id, item]));
                     const classes = new Map(state.classes.map((item) => [item.id, item]));
                     const subjects = new Map(state.subjects.map((item) => [item.id, item]));
@@ -11279,9 +11337,12 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                     
                     for (const [classId, load] of classLoads.entries()) {
                         let cls = classes.get(classId);
-                        if (load > 35) {
-                            fatals.push(`الفصل "${cls?.name}" لديه ${load} حصة (الحد الأقصى 35). يستحيل إنشاء الجدول.`);
-                        } else if (load > 33) {
+                        
+                        const maxW = getTotalWeeklyPeriods();
+                        if (load > maxW) {
+                            fatals.push(`الفصل "${cls?.name}" لديه ${load} حصة (الحد الأقصى ${maxW}). يستحيل إنشاء الجدول.`);
+                        } else if (load > maxW - 2) {
+
                             warnings.push(`الفصل "${cls?.name}" لديه جدول مزدحم جداً (${load} حصة).`);
                         }
                     }
@@ -11290,21 +11351,44 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                         let teacher = teachers.get(teacherId);
                         if (!teacher) continue;
                         let maxL = Number(teacher.maxLessons || 24);
-                        if (load > 35) {
-                            fatals.push(`المعلم "${teacher.name}" مكلف بـ ${load} حصة، وهذا يفوق أيام الأسبوع (35).`);
+                        
+                        const maxW = getTotalWeeklyPeriods();
+                        if (load > maxW) {
+                            fatals.push(`المعلم "${teacher.name}" مكلف بـ ${load} حصة، وهذا يفوق أيام الأسبوع (${maxW}).`);
                         } else if (load > maxL) {
+
                             fatals.push(`المعلم "${teacher.name}" نصابه ${load} حصة، يفوق الحد الذي سجلته له (${maxL}).`);
                         } else if (load > 24) {
                             warnings.push(`المعلم "${teacher.name}" لديه نصاب مرتفع (${load} حصة)، سيعمل أكثر من 5 حصص يومياً.`);
                         }
                     }
                     
+                    let comparisonHtml = `
+                        <div class="mt-4 p-4 border rounded-md" style="background-color: #f8fafc; border-color: #cbd5e1;">
+                            <h4 class="font-bold mb-2">إحصائيات الجدول الأسبوعي:</h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="p-3 bg-white border rounded shadow-sm text-center">
+                                    <span class="block text-sm text-gray-500">إجمالي حصص المعلمين</span>
+                                    <strong class="text-xl" style="${totalTeacherPeriods > totalEmptySlots ? 'color: red;' : 'color: #0f172a;'}">${totalTeacherPeriods}</strong>
+                                </div>
+                                <div class="p-3 bg-white border rounded shadow-sm text-center">
+                                    <span class="block text-sm text-gray-500">سعة فصول المدرسة</span>
+                                    <strong class="text-xl text-blue-600">${totalEmptySlots}</strong>
+                                </div>
+                            </div>
+                            ${totalTeacherPeriods > totalEmptySlots 
+                                ? `<p class="text-red-600 mt-2 text-sm font-bold">⚠️ تنبيه: حصص المعلمين تتجاوز سعة الفصول المتاحة بـ ${totalTeacherPeriods - totalEmptySlots} حصة!</p>`
+                                : `<p class="text-green-600 mt-2 text-sm">✅ سعة الفصول تستوعب جميع حصص المعلمين (يوجد ${totalEmptySlots - totalTeacherPeriods} حصة فراغ).</p>`
+                            }
+                        </div>
+                    `;
+
                     if (fatals.length === 0 && warnings.length === 0) {
-                        resultDiv.innerHTML = '<div class="p-4 bg-green-50 text-green-700 rounded-md font-bold">✅ التكليفات سليمة تماماً ولا توجد تعارضات متوقعة! الجدول جاهز للإنشاء.</div>';
+                        resultDiv.innerHTML = '<div class="p-4 bg-green-50 text-green-700 rounded-md font-bold">✅ التكليفات سليمة تماماً ولا توجد تعارضات متوقعة! الجدول جاهز للإنشاء.</div>' + comparisonHtml;
                     } else if (fatals.length > 0) {
-                        resultDiv.innerHTML = '<div class="p-4 bg-red-50 text-red-700 rounded-md"><strong>⚠️ أخطاء تمنع بناء الجدول:</strong><ul class="list-disc pl-5 mt-2 space-y-1">' + fatals.map(f => '<li>'+f+'</li>').join('') + '</ul></div>';
+                        resultDiv.innerHTML = '<div class="p-4 bg-red-50 text-red-700 rounded-md"><strong>⚠️ أخطاء تمنع بناء الجدول:</strong><ul class="list-disc pl-5 mt-2 space-y-1">' + fatals.map(f => '<li>'+f+'</li>').join('') + '</ul></div>' + comparisonHtml;
                     } else {
-                        resultDiv.innerHTML = '<div class="p-4 bg-yellow-50 text-yellow-700 rounded-md"><strong>⚠️ تحذيرات (الجدول سيُبنى ولكن بضغط كبير):</strong><ul class="list-disc pl-5 mt-2 space-y-1">' + warnings.map(w => '<li>'+w+'</li>').join('') + '</ul></div>';
+                        resultDiv.innerHTML = '<div class="p-4 bg-yellow-50 text-yellow-700 rounded-md"><strong>⚠️ تحذيرات (الجدول سيُبنى ولكن بضغط كبير):</strong><ul class="list-disc pl-5 mt-2 space-y-1">' + warnings.map(w => '<li>'+w+'</li>').join('') + '</ul></div>' + comparisonHtml;
                     }
                     resultDiv.style.display = "block";
                 });
@@ -11531,7 +11615,7 @@ let scheduleViewMode = 'class'; // 'class' or 'teacher'
                 const endPeriod =
                     startPeriod + duration - 1;
 
-                if (startPeriod < 1 || endPeriod > 7) {
+                if (startPeriod < 1 || endPeriod > getDailyPeriods(day)) {
                     return {
                         ok: false,
                         message:
